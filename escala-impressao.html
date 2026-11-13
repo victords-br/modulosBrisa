@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light">
+    <title>Escala de Trabalho - Brisa Transporte</title>
+    <style>
+        :root {
+            color-scheme: light;
+            font-family: Arial, Helvetica, sans-serif;
+            color: #23332f;
+            background: #edf1ef;
+        }
+
+        * { box-sizing: border-box; }
+
+        body { margin: 0; min-height: 100vh; padding: 32px 20px; }
+
+        .acoes {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            max-width: 1120px;
+            margin: 0 auto 16px;
+        }
+
+        .acoes a, .acoes button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 42px;
+            padding: 0 16px;
+            border: 1px solid #285f55;
+            border-radius: 4px;
+            color: #285f55;
+            background: #fff;
+            font-size: 14px;
+            font-weight: 700;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .acoes button { color: #fff; background: #285f55; }
+        .acoes button:disabled { opacity: .5; cursor: wait; }
+
+        .folha {
+            max-width: 1120px;
+            min-height: 600px;
+            margin: 0 auto;
+            padding: 48px 52px 32px;
+            border-top: 8px solid #285f55;
+            background: #fff;
+            box-shadow: 0 8px 30px rgba(24, 49, 42, .1);
+        }
+
+        .estado { color: #52635e; font-size: 15px; }
+        .estado[hidden], .conteudo[hidden] { display: none; }
+        .marca { color: #285f55; font-size: 12px; font-weight: 700; letter-spacing: 1.4px; text-transform: uppercase; }
+        h1 { margin: 8px 0 4px; color: #172f2a; font-size: 28px; }
+        .subtitulo { margin: 0; color: #64736f; font-size: 14px; }
+
+        .resumo {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 16px;
+            margin: 28px 0 22px;
+            padding: 16px;
+            border: 1px solid #dce5e1;
+            border-left: 4px solid #3c8175;
+            background: #f5f8f6;
+        }
+
+        .resumo-item { min-width: 0; }
+        .rotulo { display: block; margin-bottom: 5px; color: #697873; font-size: 10px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; }
+        .valor { color: #233a34; font-size: 14px; font-weight: 700; overflow-wrap: anywhere; }
+
+        table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        th { padding: 11px 9px; color: #fff; background: #285f55; font-size: 10px; letter-spacing: .5px; text-align: left; text-transform: uppercase; }
+        td { padding: 10px 9px; border-bottom: 1px solid #e3e9e6; font-size: 12px; overflow-wrap: anywhere; vertical-align: top; }
+        tbody tr:nth-child(even) { background: #f6f8f7; }
+        .horario { color: #285f55; font-weight: 700; white-space: nowrap; }
+        th:nth-child(1) { width: 13%; }
+        th:nth-child(2) { width: 19%; }
+        th:nth-child(3) { width: 10%; }
+        th:nth-child(4) { width: 16%; }
+        th:nth-child(5) { width: 16%; }
+        th:nth-child(6) { width: 26%; }
+
+        .rodape { display: flex; justify-content: space-between; gap: 12px; margin-top: 18px; padding-top: 10px; border-top: 1px solid #dce5e1; color: #74817d; font-size: 10px; }
+
+        @media (max-width: 700px) {
+            body { padding: 16px 10px; }
+            .folha { min-height: 0; padding: 28px 18px; }
+            .resumo { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .tabela-wrap { overflow-x: auto; }
+            table { min-width: 760px; }
+        }
+
+        @page { size: A4 landscape; margin: 15mm 13mm 17mm; }
+
+        @media print {
+            :root { background: #fff; }
+            body { min-height: 0; padding: 0; }
+            .acoes { display: none; }
+            .folha { max-width: none; min-height: 0; margin: 0; padding: 0; border-top-width: 6px; box-shadow: none; }
+            .resumo { grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 18px 0 14px; padding: 11px; }
+            h1 { font-size: 24px; }
+            th { padding: 8px; font-size: 8px; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+            td { padding: 7px 8px; font-size: 9px; }
+            tbody tr:nth-child(even) { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+            tr { break-inside: avoid; page-break-inside: avoid; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="acoes" aria-label="Ações da página">
+        <a href="escala.html">Voltar à escala</a>
+        <button id="btnImprimir" type="button" disabled>Imprimir / Salvar PDF</button>
+    </nav>
+    <main class="folha">
+        <p class="estado" id="estadoPagina" role="status">Carregando os dados da escala...</p>
+        <div class="conteudo" id="conteudoEscala" hidden>
+            <header>
+                <div class="marca">Brisa Transporte</div>
+                <h1>Escala de Trabalho</h1>
+                <p class="subtitulo">Programação operacional de motoristas e veículos</p>
+            </header>
+            <section class="resumo" aria-label="Resumo da escala">
+                <div class="resumo-item"><span class="rotulo">Data da escala</span><span class="valor" id="dataEscala"></span></div>
+                <div class="resumo-item"><span class="rotulo">Linha</span><span class="valor" id="linhaEscala"></span></div>
+                <div class="resumo-item"><span class="rotulo">Turnos programados</span><span class="valor" id="totalTurnos"></span></div>
+                <div class="resumo-item"><span class="rotulo">Motoristas</span><span class="valor" id="totalMotoristas"></span></div>
+            </section>
+            <div class="tabela-wrap">
+                <table>
+                    <thead>
+                        <tr><th>Horário</th><th>Motorista</th><th>Matrícula</th><th>Linha</th><th>Carro / Ordem</th><th>Trajeto</th></tr>
+                    </thead>
+                    <tbody id="linhasEscala"></tbody>
+                </table>
+            </div>
+            <footer class="rodape">
+                <span>Documento operacional · Brisa Transporte</span>
+                <span id="dataGeracao"></span>
+            </footer>
+        </div>
+    </main>
+    <script>
+        const estadoPagina = document.getElementById('estadoPagina');
+        const conteudoEscala = document.getElementById('conteudoEscala');
+        const btnImprimir = document.getElementById('btnImprimir');
+        let dadosCarregados = false;
+
+        function notificarPaginaPronta() {
+            if (window.opener && !window.opener.closed) {
+                window.opener.postMessage({ tipo: 'ESCALA_IMPRESSAO_PRONTA' }, window.location.origin);
+            }
+        }
+
+        window.addEventListener('message', event => {
+            if (event.origin !== window.location.origin || event.source !== window.opener || event.data?.tipo !== 'ESCALA_PARA_IMPRESSAO' || dadosCarregados) return;
+
+            const dados = event.data.dados;
+            document.getElementById('dataEscala').textContent = dados.data;
+            document.getElementById('linhaEscala').textContent = dados.linha;
+            document.getElementById('totalTurnos').textContent = dados.turnos;
+            document.getElementById('totalMotoristas').textContent = dados.motoristas;
+            document.getElementById('dataGeracao').textContent = `Gerado em ${dados.geradoEm}`;
+            document.title = `Escala de Trabalho - ${dados.data}`;
+
+            const corpoTabela = document.getElementById('linhasEscala');
+            dados.escalas.forEach(escala => {
+                const linha = document.createElement('tr');
+                [escala.horario, escala.motorista, escala.matricula, escala.linha, escala.carro, escala.trajeto].forEach((valor, indice) => {
+                    const celula = document.createElement('td');
+                    celula.textContent = valor;
+                    if (indice === 0) celula.className = 'horario';
+                    linha.append(celula);
+                });
+                corpoTabela.append(linha);
+            });
+
+            dadosCarregados = true;
+            estadoPagina.hidden = true;
+            conteudoEscala.hidden = false;
+            btnImprimir.disabled = false;
+            window.opener.postMessage({ tipo: 'ESCALA_IMPRESSAO_RECEBIDA' }, window.location.origin);
+        });
+
+        btnImprimir.addEventListener('click', () => window.print());
+        notificarPaginaPronta();
+    </script>
+</body>
+</html>

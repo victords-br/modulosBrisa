@@ -21,6 +21,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const formReplicarEscala = document.getElementById('formReplicarEscala');
     const modalReplicarEscala = document.getElementById('modalReplicarEscala');
     const listaEscalas = document.getElementById('listaEscalas');
+    const btnGerarPdfEscala = document.getElementById('btnGerarPdfEscala');
+    let escalasCarregadas = [];
+    let filtrosCarregados = null;
 
     if (listaEscalas) {
         listaEscalas.addEventListener('click', event => {
@@ -145,11 +148,92 @@ document.addEventListener('DOMContentLoaded', async () => {
         })[caractere]);
     }
 
+    function gerarPdfEscala() {
+        const dataSelecionada = filtroData?.value || '';
+        const linhaSelecionada = filtroLinha?.value || '';
+
+        if (!dataSelecionada) {
+            alert('Selecione uma data e aplique o filtro antes de gerar o PDF.');
+            return;
+        }
+
+        if (!filtrosCarregados || filtrosCarregados.data !== dataSelecionada || filtrosCarregados.linha !== linhaSelecionada) {
+            alert('Aplique os filtros selecionados antes de gerar o PDF.');
+            return;
+        }
+
+        if (escalasCarregadas.length === 0) {
+            alert('Não há escalas para a data selecionada.');
+            return;
+        }
+
+        const paginaImpressao = window.open('escala-impressao.html', '_blank');
+        if (!paginaImpressao) {
+            alert('Permita a abertura de janelas pop-up para gerar o PDF.');
+            return;
+        }
+
+        const motoristas = new Set(escalasCarregadas.map(item => item.motorista_id || item.funcionarios?.nome));
+        const escalasOrdenadas = [...escalasCarregadas].sort((a, b) => {
+            const motoristaA = a.funcionarios?.nome || 'Motorista removido';
+            const motoristaB = b.funcionarios?.nome || 'Motorista removido';
+            return motoristaA.localeCompare(motoristaB, 'pt-BR', { sensitivity: 'base' })
+                || (a.hora_inicio || '').localeCompare(b.hora_inicio || '');
+        });
+        const nomeLinha = linhaSelecionada
+            ? filtroLinha.options[filtroLinha.selectedIndex]?.text || 'Linha selecionada'
+            : 'Todas as linhas';
+        const dadosImpressao = {
+            data: formatarData(dataSelecionada),
+            linha: nomeLinha,
+            turnos: escalasCarregadas.length,
+            motoristas: motoristas.size,
+            geradoEm: new Date().toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }),
+            escalas: escalasOrdenadas.map(item => ({
+                horario: `${formatarHora(item.hora_inicio)} - ${formatarHora(item.hora_fim)}`,
+                motorista: item.funcionarios?.nome || 'Motorista removido',
+                matricula: item.funcionarios?.matricula || '-',
+                linha: item.linhas?.nome || 'Linha removida',
+                carro: `${item.carros?.numero_ordem || 'Carro removido'}${item.carros?.modelo ? ` · ${item.carros.modelo}` : ''}`,
+                trajeto: `${item.local_inicio || 'Não informado'} - ${item.local_final || 'Não informado'}`
+            }))
+        };
+
+        const mensagemImpressao = { tipo: 'ESCALA_PARA_IMPRESSAO', dados: dadosImpressao };
+        const enviarDados = event => {
+            if (event.origin !== window.location.origin || event.source !== paginaImpressao) return;
+
+            if (event.data?.tipo === 'ESCALA_IMPRESSAO_PRONTA') {
+                paginaImpressao.postMessage(mensagemImpressao, window.location.origin);
+            } else if (event.data?.tipo === 'ESCALA_IMPRESSAO_RECEBIDA') {
+                window.removeEventListener('message', enviarDados);
+                window.clearInterval(intervaloEnvio);
+            }
+        };
+
+        window.addEventListener('message', enviarDados);
+        const intervaloEnvio = window.setInterval(() => {
+            if (paginaImpressao.closed) {
+                window.removeEventListener('message', enviarDados);
+                window.clearInterval(intervaloEnvio);
+                return;
+            }
+            paginaImpressao.postMessage(mensagemImpressao, window.location.origin);
+        }, 500);
+        paginaImpressao.addEventListener('beforeunload', () => {
+            window.removeEventListener('message', enviarDados);
+            window.clearInterval(intervaloEnvio);
+        }, { once: true });
+    }
+
     function iniciaisDoNome(nome) {
         return nome.split(/\s+/).filter(Boolean).slice(0, 2).map(parte => parte[0]).join('').toLocaleUpperCase('pt-BR') || '?';
     }
 
     async function carregarEscalas() {
+        escalasCarregadas = [];
+        filtrosCarregados = null;
+
         let query = window.supabaseClient
             .from('escalas_trabalho')
             .select('*, linhas(nome), carros(numero_ordem, modelo), funcionarios(nome, matricula)');
@@ -170,6 +254,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.error('Erro ao buscar escalas:', error);
             return;
         }
+
+        escalasCarregadas = data || [];
+        filtrosCarregados = {
+            data: filtroData?.value || '',
+            linha: filtroLinha?.value || ''
+        };
 
         if (!listaEscalas) return;
 
@@ -500,6 +590,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const btnFiltrarEscala = document.getElementById('btnFiltrarEscala');
     if (btnFiltrarEscala) {
         btnFiltrarEscala.addEventListener('click', carregarEscalas);
+    }
+
+    if (btnGerarPdfEscala) {
+        btnGerarPdfEscala.addEventListener('click', gerarPdfEscala);
     }
 
     const botaoNovaEscala = document.querySelector('[data-bs-target="#modalEscala"]');
