@@ -135,7 +135,22 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function formatarHora(hora) {
         if (!hora) return '-';
-        return hora.substring(0, 5);
+
+        const valor = String(hora).trim();
+        const formato12Horas = valor.match(/^(\d{1,2}):(\d{2})(?::\d{2})?\s*(AM|PM)$/i);
+
+        if (formato12Horas) {
+            let horaNumerica = Number(formato12Horas[1]) % 12;
+            if (formato12Horas[3].toUpperCase() === 'PM') horaNumerica += 12;
+            return `${String(horaNumerica).padStart(2, '0')}:${formato12Horas[2]}`;
+        }
+
+        const formato24Horas = valor.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+        if (formato24Horas) {
+            return `${formato24Horas[1].padStart(2, '0')}:${formato24Horas[2]}`;
+        }
+
+        return valor.substring(0, 5);
     }
 
     function escaparHtml(valor) {
