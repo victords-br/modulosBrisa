@@ -80,8 +80,8 @@
                             <div class="col-md-4"><label class="fw-bold form-label">Motorista</label><select class="form-select" id="escalaMotoristaId" required="">
                                     <option value="" selected="">Carregando motoristas...</option>
                                 </select></div>
-                            <div class="col-md-4"><label class="fw-bold form-label">Hora Início</label><input class="form-control" id="escalaInicio" required="" type="time"></div>
-                            <div class="col-md-4"><label class="fw-bold form-label">Hora Fim</label><input class="form-control" id="escalaFim" required="" type="time"></div>
+                            <div class="col-md-4"><label class="fw-bold form-label" for="escalaInicio">Hora Início (24h)</label><input class="form-control" id="escalaInicio" type="text" inputmode="numeric" placeholder="00:00" maxlength="5" autocomplete="off" required></div>
+                            <div class="col-md-4"><label class="fw-bold form-label" for="escalaFim">Hora Fim (24h)</label><input class="form-control" id="escalaFim" type="text" inputmode="numeric" placeholder="00:00" maxlength="5" autocomplete="off" required></div>
                         </div>
                         <div class="row mb-3">
                             <div class="col-md-6"><label class="fw-bold form-label">Local Início (Trajeto)</label><input class="form-control" type="text" id="escalaLocalInicio" placeholder="Ex: GARAGEM"></div>

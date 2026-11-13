@@ -153,6 +153,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         return valor.substring(0, 5);
     }
 
+    function configurarCampoHora(campo) {
+        campo.addEventListener('input', () => {
+            const digitos = campo.value.replace(/\D/g, '').slice(0, 4);
+            campo.value = digitos.length > 2
+                ? `${digitos.slice(0, 2)}:${digitos.slice(2)}`
+                : digitos;
+        });
+    }
+
+    function terminaNoDiaSeguinte(horaInicio, horaFim) {
+        return Boolean(horaInicio && horaFim && formatarHora(horaFim) < formatarHora(horaInicio));
+    }
+
     function escaparHtml(valor) {
         return String(valor ?? '').replace(/[&<>"']/g, caractere => ({
             '&': '&amp;',
@@ -205,7 +218,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             motoristas: motoristas.size,
             geradoEm: new Date().toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }),
             escalas: escalasOrdenadas.map(item => ({
-                horario: `${formatarHora(item.hora_inicio)} - ${formatarHora(item.hora_fim)}`,
+                horario: `${formatarHora(item.hora_inicio)} - ${formatarHora(item.hora_fim)}${terminaNoDiaSeguinte(item.hora_inicio, item.hora_fim) ? ' (+1 dia)' : ''}`,
                 motorista: item.funcionarios?.nome || 'Motorista removido',
                 matricula: item.funcionarios?.matricula || '-',
                 linha: item.linhas?.nome || 'Linha removida',
@@ -342,10 +355,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                                     <span>DATA</span>
                                     <strong>${escaparHtml(formatarData(item.data_escala))}</strong>
                                 </div>
-                                <div class="escala-turno-horario" aria-label="Das ${escaparHtml(formatarHora(item.hora_inicio))} às ${escaparHtml(formatarHora(item.hora_fim))}">
+                                <div class="escala-turno-horario" aria-label="Das ${escaparHtml(formatarHora(item.hora_inicio))} às ${escaparHtml(formatarHora(item.hora_fim))}${terminaNoDiaSeguinte(item.hora_inicio, item.hora_fim) ? ' do dia seguinte' : ''}">
                                     <strong>${escaparHtml(formatarHora(item.hora_inicio))}</strong>
                                     <span aria-hidden="true">-</span>
-                                    <strong>${escaparHtml(formatarHora(item.hora_fim))}</strong>
+                                    <strong>${escaparHtml(formatarHora(item.hora_fim))}${terminaNoDiaSeguinte(item.hora_inicio, item.hora_fim) ? ' (+1 dia)' : ''}</strong>
                                 </div>
                                 <div class="escala-turno-linha">
                                     <span>LINHA</span>
@@ -388,6 +401,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     if (formEscala) {
+        configurarCampoHora(document.getElementById('escalaInicio'));
+        configurarCampoHora(document.getElementById('escalaFim'));
+
         formEscala.addEventListener('submit', async (event) => {
             event.preventDefault();
 
@@ -407,13 +423,19 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
 
+            const formatoHora24h = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
+            if (!formatoHora24h.test(dados.hora_inicio) || !formatoHora24h.test(dados.hora_fim)) {
+                alert('Informe os horários no formato de 24 horas, entre 00:00 e 23:59.');
+                return;
+            }
+
             const [inicioHora, inicioMinuto] = dados.hora_inicio.split(':').map(Number);
             const [fimHora, fimMinuto] = dados.hora_fim.split(':').map(Number);
             const inicioMinutos = (inicioHora * 60) + inicioMinuto;
             const fimMinutos = (fimHora * 60) + fimMinuto;
 
-            if (fimMinutos <= inicioMinutos) {
-                alert('A hora final deve ser maior que a hora inicial.');
+            if (fimMinutos === inicioMinutos) {
+                alert('A hora final deve ser diferente da hora inicial.');
                 return;
             }
 
@@ -474,8 +496,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('escalaLinhaId').value = data.linha_id || '';
         document.getElementById('escalaCarroId').value = data.carro_id || '';
         document.getElementById('escalaMotoristaId').value = data.motorista_id || '';
-        document.getElementById('escalaInicio').value = data.hora_inicio || '';
-        document.getElementById('escalaFim').value = data.hora_fim || '';
+        document.getElementById('escalaInicio').value = data.hora_inicio ? formatarHora(data.hora_inicio) : '';
+        document.getElementById('escalaFim').value = data.hora_fim ? formatarHora(data.hora_fim) : '';
         document.getElementById('escalaLocalInicio').value = data.local_inicio || '';
         document.getElementById('escalaLocalFinal').value = data.local_final || '';
 
