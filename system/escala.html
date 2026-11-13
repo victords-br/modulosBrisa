@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html data-bs-theme="light" lang="pt-BR">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
+    <title>Escala de Trabalho - Brisa Transporte</title>
+    <link rel="stylesheet" href="assets/bootstrap/css/bootstrap.min.css">
+    <link rel="stylesheet" href="assets/css/styles.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body class="tela-dashboard escala-page">
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-2 col-lg-2 d-flex flex-column sidebar">
+                <h4 class="text-center mb-4">Brisa Transporte</h4>
+                <nav class="flex-column nav"><a class="mb-2 nav-link text-warning" href="index.html"><svg class="bi bi-grid-fill me-2" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M1 2.5A1.5 1.5 0 0 1 2.5 1h3A1.5 1.5 0 0 1 7 2.5v3A1.5 1.5 0 0 1 5.5 7h-3A1.5 1.5 0 0 1 1 5.5zm8 0A1.5 1.5 0 0 1 10.5 1h3A1.5 1.5 0 0 1 15 2.5v3A1.5 1.5 0 0 1 13.5 7h-3A1.5 1.5 0 0 1 9 5.5zm-8 8A1.5 1.5 0 0 1 2.5 9h3A1.5 1.5 0 0 1 7 10.5v3A1.5 1.5 0 0 1 5.5 15h-3A1.5 1.5 0 0 1 1 13.5zm8 0A1.5 1.5 0 0 1 10.5 9h3a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1-1.5 1.5h-3A1.5 1.5 0 0 1 9 13.5z"></path>
+                        </svg>Escolher Módulo </a><a class="nav-link" href="dashboard.html"><svg class="bi bi-wallet2 me-2" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M12.136.326A1.5 1.5 0 0 1 14 1.78V3h.5A1.5 1.5 0 0 1 16 4.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 0 13.5v-9a1.5 1.5 0 0 1 1.432-1.499zM5.562 3H13V1.78a.5.5 0 0 0-.621-.484zM1.5 4a.5.5 0 0 0-.5.5v9a.5.5 0 0 0 .5.5h13a.5.5 0 0 0 .5-.5v-9a.5.5 0 0 0-.5-.5z"></path>
+                        </svg>Controle Financeiro </a><a class="nav-link active" href="escala.html"><svg class="bi bi-calendar-range me-2" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M9 7a1 1 0 0 1 1-1h5v2h-5a1 1 0 0 1-1-1M1 9h4a1 1 0 0 1 0 2H1z"></path>
+                            <path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5M1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4z"></path>
+                        </svg>Escala de Horários </a></nav>
+                <div class="mt-3 px-2">
+                    <hr class="text-white-50">
+                    <h6 class="fs-6 fw-bold text-white mb-2">Filtrar Escala</h6>
+                    <div class="mb-2"><label class="form-label small text-white-50 mb-1">Data</label><input class="form-control-sm form-control" type="date" id="filtroData"></div>
+                    <div class="mb-2"><label class="form-label small text-white-50 mb-1">Linha</label><select class="form-select-sm form-select" id="filtroLinha">
+                            <option value="">Todas as Linhas</option>
+                        </select></div>
+                    <div class="d-grid gap-1 mt-2"><button class="btn btn-light btn-sm fw-bold" type="button" id="btnFiltrarEscala">Filtrar</button></div>
+                </div>
+                <nav class="flex-column mt-auto nav"><a class="nav-link text-danger" onclick="logout()" href="#"><svg class="bi bi-box-arrow-right me-2" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 16 16">
+                            <path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0z"></path>
+                            <path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708z"></path>
+                        </svg>Sair </a></nav>
+                <div class="text-center mt-3 mb-3"><small class="text-white-50" id="infoUsuario">Carregando...</small></div>
+            </div>
+            <div class="col-md-10 p-4 escala-conteudo">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h2 class="fw-bold text-dark mb-1"><svg class="bi bi-calendar-range me-2" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M9 7a1 1 0 0 1 1-1h5v2h-5a1 1 0 0 1-1-1M1 9h4a1 1 0 0 1 0 2H1z"></path>
+                                <path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5M1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4z"></path>
+                            </svg>Escala de Trabalho e Horários </h2>
+                        <p class="small text-muted mb-0">Turnos organizados por motorista. Use os filtros para localizar uma escala.</p>
+                    </div><div class="d-flex flex-wrap gap-2">
+                        <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalReplicarEscala" type="button">Replicar dia</button>
+                        <button class="btn btn-primary-custom" data-bs-toggle="modal" data-bs-target="#modalEscala" type="button"><svg class="bi bi-plus-circle me-1" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"></path>
+                            <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4"></path>
+                        </svg> Nova Escala </button>
+                    </div>
+                </div>
+                <div class="escala-lista" id="listaEscalas" aria-live="polite"></div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" role="dialog" tabindex="-1" id="modalEscala">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header text-white bg-dark">
+                    <h5 class="modal-title" id="tituloModalEscala">Nova Escala de Trabalho</h5><button class="btn-close btn-close-white" data-bs-dismiss="modal" type="button"></button>
+                </div>
+                <form id="formEscala">
+                    <div class="modal-body"><input type="hidden" id="escalaId">
+                        <div class="row mb-3">
+                            <div class="col-md-4"><label class="fw-bold form-label">Data da Escala</label><input class="form-control" id="escalaData" required="" type="date"></div>
+                            <div class="col-md-4"><label class="fw-bold form-label">Linha</label><select class="form-select" id="escalaLinhaId" required="">
+                                    <option value="" selected="">Carregando linhas...</option>
+                                </select></div>
+                            <div class="col-md-4"><label class="fw-bold form-label">Carro / Ordem</label><select class="form-select" id="escalaCarroId" required="">
+                                    <option value="" selected="">Carregando carros...</option>
+                                </select></div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-4"><label class="fw-bold form-label">Motorista</label><select class="form-select" id="escalaMotoristaId" required="">
+                                    <option value="" selected="">Carregando motoristas...</option>
+                                </select></div>
+                            <div class="col-md-4"><label class="fw-bold form-label">Hora Início</label><input class="form-control" id="escalaInicio" required="" type="time"></div>
+                            <div class="col-md-4"><label class="fw-bold form-label">Hora Fim</label><input class="form-control" id="escalaFim" required="" type="time"></div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6"><label class="fw-bold form-label">Local Início (Trajeto)</label><input class="form-control" type="text" id="escalaLocalInicio" placeholder="Ex: GARAGEM"></div>
+                            <div class="col-md-6"><label class="fw-bold form-label">Local Final (Trajeto)</label><input class="form-control" type="text" id="escalaLocalFinal" placeholder="Ex: TERMINAL URBANO"></div>
+                        </div>
+                    </div>
+                    <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal" type="button">Cancelar</button><button class="btn btn-primary-custom" type="submit">Salvar Escala</button></div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" role="dialog" tabindex="-1" id="modalReplicarEscala" aria-labelledby="tituloModalReplicarEscala" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <form id="formReplicarEscala">
+                    <div class="modal-header text-white bg-dark">
+                        <h5 class="modal-title" id="tituloModalReplicarEscala">Replicar escalas de um dia</h5>
+                        <button class="btn-close btn-close-white" data-bs-dismiss="modal" type="button" aria-label="Fechar"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="fw-bold form-label" for="dataOrigemReplicar">Copiar escalas de</label>
+                            <input class="form-control" id="dataOrigemReplicar" type="date" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="fw-bold form-label" for="dataDestinoReplicar">Para a data</label>
+                            <input class="form-control" id="dataDestinoReplicar" type="date" required>
+                        </div>
+                        <p class="small text-muted mb-0">Linha, carro, motorista, horários e trajetos serão copiados. Escalas idênticas já existentes no destino serão ignoradas.</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" data-bs-dismiss="modal" type="button">Cancelar</button>
+                        <button class="btn btn-primary-custom" id="btnConfirmarReplicacao" type="submit">Replicar escalas</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <script src="assets/js/supabaseClient.js"></script>
+    <script src="assets/js/accessControl.js"></script>
+    <script src="assets/js/escala.js"></script>
+    <script src="assets/bootstrap/js/bootstrap.min.js"></script>
+</body>
+
+</html>

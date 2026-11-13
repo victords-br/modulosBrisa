@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html data-bs-theme="light" lang="pt-BR">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
+    <title>Painel de Lançamentos</title>
+    <link rel="stylesheet" href="assets/bootstrap/css/bootstrap.min.css">
+    <link rel="stylesheet" href="assets/css/styles.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body class="tela-dashboard">
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-2 col-lg-2 d-flex flex-column sidebar">
+                <h4 class="text-center mb-4">Brisa Transporte</h4>
+                <nav class="flex-column nav"><a class="mb-2 nav-link text-warning" href="index.html"><svg class="bi bi-grid-fill me-2" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M1 2.5A1.5 1.5 0 0 1 2.5 1h3A1.5 1.5 0 0 1 7 2.5v3A1.5 1.5 0 0 1 5.5 7h-3A1.5 1.5 0 0 1 1 5.5zm8 0A1.5 1.5 0 0 1 10.5 1h3A1.5 1.5 0 0 1 15 2.5v3A1.5 1.5 0 0 1 13.5 7h-3A1.5 1.5 0 0 1 9 5.5zm-8 8A1.5 1.5 0 0 1 2.5 9h3A1.5 1.5 0 0 1 7 10.5v3A1.5 1.5 0 0 1 5.5 15h-3A1.5 1.5 0 0 1 1 13.5zm8 0A1.5 1.5 0 0 1 10.5 9h3a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1-1.5 1.5h-3A1.5 1.5 0 0 1 9 13.5z"></path>
+                        </svg>Escolher Módulo</a><a id="linkLancamento" class="nav-link active" onclick="mostrarAba(&#39;lancamento&#39;)">Novo Lançamento</a><a id="linkTabela" class="nav-link" onclick="mostrarAba(&#39;tabela&#39;)" style="display:none;">Ver Todos</a></nav>
+                <nav class="flex-column mt-auto nav"><a class="nav-link text-danger" onclick="logout()" href="#">Sair</a></nav>
+                <div class="text-center mt-3 mb-3"><small class="text-white-50" id="infoUsuario">Carregando...</small></div>
+            </div>
+            <div class="col-md-10 p-4 dashboard-conteudo">
+                <h2 class="fw-bold text-dark mb-4" id="tituloPagina">Novo Lançamento</h2>
+                <div class="dashboard-filtros" id="painelFiltroSidebar" style="display:none;">
+                    <h6>Filtrar Lançamentos</h6>
+                    <div><label class="form-label small" for="filtroLinha">Linha</label><select class="form-select form-select-sm" id="filtroLinha">
+                            <option value="" selected="">Todas as Linhas</option>
+                        </select></div>
+                    <div><label class="form-label small" for="filtroDataInicio">Data Inicial</label><input class="form-control form-control-sm" type="date" id="filtroDataInicio"></div>
+                    <div><label class="form-label small" for="filtroDataFim">Data Final</label><input class="form-control form-control-sm" type="date" id="filtroDataFim"></div>
+                    <div class="dashboard-filtro-acoes"><button class="btn btn-primary-custom btn-sm" type="button" id="btnFiltrar">Filtrar</button><button class="btn btn-outline-secondary btn-sm" type="button" id="btnLimparFiltro">Limpar</button></div>
+                </div>
+                <div class="card p-4 card-modern" id="abaLancamento">
+                    <form id="formLancamento">
+                        <div class="row mb-3">
+                            <div class="col-md-6"><label class="fw-bold form-label">Data</label><input class="form-control" type="date" id="dataOp" required=""></div>
+                            <div class="col-md-6"><label class="fw-bold form-label">Linha</label><select class="form-select" id="linha">
+                                    <option value="&quot;" selected="">Carregando Linhas...</option>
+                                </select></div>
+                        </div>
+                        <div id="camposFinanceiros">
+                            <div class="row mb-3">
+                                <div class="col-md-4"><label class="form-label">Valor Garagem (R$)</label><input class="form-control" type="number" id="vGaragem" step="0.01" value="0"></div>
+                                <div class="col-md-4"><label class="form-label">Valor SIT (R$)</label><input class="form-control" type="number" id="vCity" step="0.01" value="0"></div>
+                                <div class="col-md-4"><label class="form-label">Valor Excesso (R$)</label><input class="form-control" type="number" id="vExcesso" step="0.01" value="0"></div>
+                            </div>
+                        </div>
+                        <div class="row mb-3" id="camposBilhetagem">
+                            <div class="col-md-3"><label class="form-label">Comum</label><input class="form-control" type="number" id="vComum" step="0.01" value="0"></div>
+                            <div class="col-md-3"><label class="form-label">Escolar</label><input class="form-control" type="number" id="vEscolar" step="0.01" value="0"></div>
+                            <div class="col-md-3"><label class="form-label">Pagantes</label><input class="form-control" type="number" id="vPagantes" step="0.01" value="0"></div>
+                            <div class="col-md-3"><label class="form-label">VT</label><input class="form-control" type="number" id="vVt" step="0.01" value="0"></div>
+                        </div>
+                        <div class="row mb-4">
+                            <div class="col-md-6"><label class="fw-bold form-label">KM Rodado</label><input class="form-control" type="number" id="kmRodado" required="" step="0.01" value="0"></div>
+                        </div><button class="btn btn-primary-custom" type="submit">Salvar Lançamento</button>
+                        <div class="fw-bold text-success mt-3" id="msgSucesso" style="display:none;"><span>Lançamento salvo com sucesso!</span></div>
+                    </form>
+                </div>
+                <div class="card p-4 card-modern" id="abaTabela" style="display:none;">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Data</th>
+                                    <th>Linha</th>
+                                    <th>Garagem</th>
+                                    <th>City</th>
+                                    <th>Excesso</th>
+                                    <th>Comum</th>
+                                    <th>Escolar</th>
+                                    <th>Pagantes</th>
+                                    <th>VT</th>
+                                    <th>KM</th>
+                                    <th>Total R$</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabelaCorpo"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="assets/js/supabaseClient.js"></script>
+    <script src="assets/js/accessControl.js"></script>
+    <script src="assets/js/dashboard.js"></script>
+    <script src="assets/bootstrap/js/bootstrap.min.js"></script>
+</body>
+
+</html>

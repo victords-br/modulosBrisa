@@ -1,0 +1,4 @@
+project_id = "brisa-transporte"
+
+[functions.manage-users]
+verify_jwt = true

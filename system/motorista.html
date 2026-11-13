@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html data-bs-theme="light" lang="pt-BR">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Minha Escala - Brisa Transporte</title>
+    <link rel="stylesheet" href="assets/bootstrap/css/bootstrap.min.css">
+    <link rel="stylesheet" href="assets/css/motorista.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="motorista-page">
+    <header class="motorista-header">
+        <div class="container motorista-shell d-flex justify-content-between align-items-center gap-3 py-3">
+            <div>
+                <div class="motorista-brand">BRISA <span>TRANSPORTE</span></div>
+                <div class="small text-white-50" id="motoristaNome">Carregando...</div>
+            </div>
+            <button class="btn btn-outline-light btn-sm" id="btnSairMotorista" type="button">Sair</button>
+        </div>
+    </header>
+
+    <main class="container motorista-shell py-4 py-md-5">
+        <section class="mb-4">
+            <p class="motorista-eyebrow mb-1">ESCALA DE TRABALHO</p>
+            <h1 class="h2 fw-bold mb-1">Minha escala</h1>
+            <p class="text-muted mb-0">Consulte seus próximos horários e trajetos.</p>
+        </section>
+
+        <form class="motorista-filtros mb-4" id="formFiltroMotorista">
+            <div class="row g-3 align-items-end">
+                <div class="col-6 col-md-4">
+                    <label class="form-label" for="dataInicioMotorista">De</label>
+                    <input class="form-control" id="dataInicioMotorista" type="date" required>
+                </div>
+                <div class="col-6 col-md-4">
+                    <label class="form-label" for="dataFimMotorista">Até</label>
+                    <input class="form-control" id="dataFimMotorista" type="date" required>
+                </div>
+                <div class="col-12 col-md-4 d-grid">
+                    <button class="btn btn-motorista-primary" id="btnBuscarEscala" type="submit">Consultar escala</button>
+                </div>
+            </div>
+        </form>
+
+        <div id="mensagemMotorista" class="alert d-none" role="status" aria-live="polite"></div>
+        <div id="resumoEscala" class="small text-muted mb-3"></div>
+        <section id="listaEscalaMotorista" aria-live="polite">
+            <div class="text-center text-muted py-5">Carregando escala...</div>
+        </section>
+    </main>
+
+    <script src="assets/js/supabaseClient.js"></script>
+    <script src="assets/js/accessControl.js"></script>
+    <script src="assets/bootstrap/js/bootstrap.min.js"></script>
+    <script src="assets/js/motorista.js"></script>
+</body>
+</html>

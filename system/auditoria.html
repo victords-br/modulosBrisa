@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html data-bs-theme="light" lang="pt-BR">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auditoria do Sistema - Brisa Transporte</title>
+    <link rel="stylesheet" href="assets/bootstrap/css/bootstrap.min.css">
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="tela-dashboard">
+    <div class="container-fluid">
+        <div class="row">
+            <aside class="col-md-2 d-flex flex-column sidebar">
+                <h4 class="text-center mb-4">Brisa Transporte</h4>
+                <nav class="nav flex-column">
+                    <a class="nav-link text-warning" href="index.html">Módulos</a>
+                    <a class="nav-link" href="ti.html">Usuários</a>
+                    <a class="nav-link active" href="auditoria.html">Auditoria</a>
+                    <a class="nav-link" href="dashboard.html">Financeiro</a>
+                    <a class="nav-link" href="escala.html">Escala</a>
+                </nav>
+                <div class="mt-auto">
+                    <button class="btn btn-link nav-link text-danger" id="btnLogout" type="button">Sair</button>
+                    <div class="text-center mt-3 mb-3"><small class="text-white-50" id="infoUsuario">Carregando...</small></div>
+                </div>
+            </aside>
+            <main class="col-md-10 p-4">
+                <div class="mb-4">
+                    <h2 class="fw-bold text-dark mb-1">Auditoria do Sistema</h2>
+                    <p class="text-muted mb-0">Histórico de alterações em usuários, lançamentos e escalas</p>
+                </div>
+
+                <div id="mensagemAuditoria" class="alert d-none" role="status" aria-live="polite"></div>
+
+                <section class="card p-3 card-modern mb-3" aria-label="Filtros de auditoria">
+                    <div class="row g-3 align-items-end">
+                        <div class="col-sm-6 col-lg-2">
+                            <label class="form-label" for="filtroEntidade">Área</label>
+                            <select class="form-select" id="filtroEntidade">
+                                <option value="">Todas</option>
+                                <option value="usuarios">Usuários</option>
+                                <option value="lancamentos">Lançamentos</option>
+                                <option value="escalas_trabalho">Escalas</option>
+                            </select>
+                        </div>
+                        <div class="col-sm-6 col-lg-2">
+                            <label class="form-label" for="filtroAcao">Ação</label>
+                            <select class="form-select" id="filtroAcao">
+                                <option value="">Todas</option>
+                                <option value="insert">Criação</option>
+                                <option value="create">Criação de usuário</option>
+                                <option value="update">Edição</option>
+                                <option value="delete">Exclusão</option>
+                            </select>
+                        </div>
+                        <div class="col-sm-6 col-lg-2">
+                            <label class="form-label" for="filtroDataInicio">De</label>
+                            <input class="form-control" id="filtroDataInicio" type="date">
+                        </div>
+                        <div class="col-sm-6 col-lg-2">
+                            <label class="form-label" for="filtroDataFim">Até</label>
+                            <input class="form-control" id="filtroDataFim" type="date">
+                        </div>
+                        <div class="col-sm-8 col-lg-3">
+                            <label class="form-label" for="buscaAuditoria">Responsável ou registro</label>
+                            <input class="form-control" id="buscaAuditoria" type="search" placeholder="Nome, e-mail ou ID">
+                        </div>
+                        <div class="col-sm-4 col-lg-1 d-grid">
+                            <button class="btn btn-primary-custom" id="btnFiltrarAuditoria" type="button" title="Aplicar filtros">Filtrar</button>
+                        </div>
+                    </div>
+                    <div class="text-end mt-2">
+                        <button class="btn btn-link btn-sm" id="btnLimparAuditoria" type="button">Limpar filtros</button>
+                    </div>
+                </section>
+
+                <section class="card p-3 card-modern" aria-label="Eventos de auditoria">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h5 class="mb-0">Eventos</h5>
+                        <span class="small text-muted" id="contadorAuditoria">Carregando...</span>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Data e hora</th>
+                                    <th>Responsável</th>
+                                    <th>Ação</th>
+                                    <th>Área</th>
+                                    <th>Registro</th>
+                                    <th>Detalhes</th>
+                                </tr>
+                            </thead>
+                            <tbody id="corpoAuditoria">
+                                <tr><td class="text-center text-muted py-4" colspan="6">Carregando eventos...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+    <script src="assets/js/supabaseClient.js"></script>
+    <script src="assets/js/accessControl.js"></script>
+    <script src="assets/bootstrap/js/bootstrap.min.js"></script>
+    <script src="assets/js/auditoria.js"></script>
+</body>
+</html>

@@ -1,0 +1,132 @@
+body.motorista-page {
+    min-height: 100vh;
+    background: #f2f6f5;
+    color: #1d2929;
+}
+
+.motorista-shell {
+    max-width: 860px;
+}
+
+.motorista-header {
+    background: #173b3c;
+    border-bottom: 4px solid #d6a53a;
+    color: #fff;
+}
+
+.motorista-brand {
+    font-size: 1rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+}
+
+.motorista-brand span {
+    font-weight: 400;
+}
+
+.motorista-eyebrow {
+    color: #39716a;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.motorista-filtros {
+    padding: 1rem;
+    border: 1px solid #dce5e2;
+    border-radius: 6px;
+    background: #fff;
+}
+
+.motorista-filtros .form-control {
+    min-height: 46px;
+    border-color: #cbd6d3;
+}
+
+.btn-motorista-primary {
+    min-height: 46px;
+    border: 0;
+    border-radius: 5px;
+    background: #235a55;
+    color: #fff;
+    font-weight: 600;
+}
+
+.btn-motorista-primary:hover,
+.btn-motorista-primary:focus-visible {
+    background: #194640;
+    color: #fff;
+}
+
+.motorista-dia {
+    margin-bottom: 1.25rem;
+}
+
+.motorista-dia h2 {
+    margin: 0 0 0.55rem;
+    color: #32504c;
+    font-size: 0.95rem;
+    font-weight: 700;
+}
+
+.motorista-turno {
+    display: grid;
+    grid-template-columns: minmax(112px, 150px) minmax(0, 1fr);
+    gap: 1rem;
+    margin-bottom: 0.65rem;
+    padding: 1rem;
+    border: 1px solid #dce5e2;
+    border-left: 4px solid #d6a53a;
+    border-radius: 6px;
+    background: #fff;
+}
+
+.motorista-horario {
+    color: #173b3c;
+    font-size: 1.05rem;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.motorista-linha {
+    margin-bottom: 0.25rem;
+    font-weight: 700;
+}
+
+.motorista-detalhe {
+    color: #667573;
+    font-size: 0.9rem;
+}
+
+.motorista-trajeto {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1rem;
+    margin-top: 0.45rem;
+    color: #40514e;
+    font-size: 0.86rem;
+}
+
+.motorista-vazio {
+    padding: 2rem 1rem;
+    border: 1px dashed #bdceca;
+    border-radius: 6px;
+    background: #fff;
+    text-align: center;
+}
+
+@media (max-width: 575.98px) {
+    .motorista-shell {
+        padding-right: 1rem;
+        padding-left: 1rem;
+    }
+
+    .motorista-filtros {
+        padding: 0.85rem;
+    }
+
+    .motorista-turno {
+        grid-template-columns: 1fr;
+        gap: 0.45rem;
+        padding: 0.9rem;
+    }
+}

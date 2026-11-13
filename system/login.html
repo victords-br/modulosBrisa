@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html data-bs-theme="light" lang="pt-BR">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
+    <title>Login - Sistema de Transporte</title>
+    <link rel="stylesheet" href="assets/bootstrap/css/bootstrap.min.css">
+    <link rel="stylesheet" href="assets/css/styles.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body class="tela-login">
+    <div class="login-card">
+        <div class="text-center mb-4">
+            <h3 class="fw-bold">Acesso ao Sistema</h3>
+            <p class="text-white-50">Brisa Transporte</p>
+        </div>
+        <form id="loginForm">
+            <div class="mb-3"><label class="form-label">E-mail Corporativo</label><input class="form-control" type="email" id="email" placeholder="seu@email.com" required=""></div>
+            <div class="mb-4"><label class="form-label">Senha</label><input class="form-control" type="password" id="password" placeholder="••••••••" required=""></div><button class="btn w-100 btn-custom" type="submit">Entrar</button>
+            <div class="small text-center text-danger mt-3" id="loginError" style="display:none;"></div>
+        </form>
+    </div>
+    <script src="assets/js/supabaseClient.js"></script>
+    <script src="assets/js/auth.js"></script>
+    <script src="assets/bootstrap/js/bootstrap.min.js"></script>
+</body>
+
+</html>
