@@ -44,6 +44,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         message.classList.add('d-none');
     }
 
+    async function loadTariffs() {
+        const status = document.getElementById('statusTarifas');
+        const { data, error } = await window.supabaseClient.rpc('obter_tarifas_lancamento');
+        if (error || !data) {
+            status.textContent = 'Não foi possível carregar as tarifas. Verifique se a migração de lançamentos por viagem foi aplicada.';
+            status.classList.add('text-danger');
+            return;
+        }
+
+        document.getElementById('tarifaComum').value = data.valor_comum;
+        document.getElementById('tarifaEscolar').value = data.valor_escolar;
+        document.getElementById('tarifaPagantes').value = data.valor_pagantes;
+        document.getElementById('tarifaVt').value = data.valor_vt;
+    }
+
     async function invokeAdmin(action, payload = {}) {
         const { data, error } = await window.supabaseClient.functions.invoke('manage-users', {
             body: { action, ...payload }
@@ -179,6 +194,32 @@ document.addEventListener('DOMContentLoaded', async () => {
     searchInput.addEventListener('input', renderUsers);
     sectorSelect.addEventListener('change', updateDriverLink);
 
+    document.getElementById('formTarifas').addEventListener('submit', async event => {
+        event.preventDefault();
+        const button = document.getElementById('btnSalvarTarifas');
+        const status = document.getElementById('statusTarifas');
+        const tarifas = {
+            p_valor_comum: Number(document.getElementById('tarifaComum').value),
+            p_valor_escolar: Number(document.getElementById('tarifaEscolar').value),
+            p_valor_pagantes: Number(document.getElementById('tarifaPagantes').value),
+            p_valor_vt: Number(document.getElementById('tarifaVt').value)
+        };
+
+        if (Object.values(tarifas).some(valor => !Number.isFinite(valor) || valor < 0)) {
+            status.textContent = 'Informe valores válidos, iguais ou maiores que zero.';
+            status.className = 'small text-danger ms-2';
+            return;
+        }
+
+        button.disabled = true;
+        status.textContent = 'Salvando...';
+        status.className = 'small text-muted ms-2';
+        const { error } = await window.supabaseClient.rpc('salvar_tarifas_lancamento', tarifas);
+        button.disabled = false;
+        status.textContent = error ? `Falha ao salvar: ${error.message}` : 'Tarifas salvas.';
+        status.className = `small ${error ? 'text-danger' : 'text-success'} ms-2`;
+    });
+
     usersBody.addEventListener('click', async event => {
         const button = event.target.closest('button[data-action]');
         if (!button) return;
@@ -240,5 +281,5 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    await loadUsers();
+    await Promise.all([loadUsers(), loadTariffs()]);
 });

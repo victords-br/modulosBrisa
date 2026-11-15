@@ -40,6 +40,9 @@
                                     <option value="&quot;" selected="">Carregando Linhas...</option>
                                 </select></div>
                         </div>
+                        <div id="statusViagens" class="small text-muted mb-3">Selecione a data e a linha para carregar as viagens da escala.</div>
+                        <div id="listaViagens" class="mb-4"></div>
+                        <div id="camposLancamentoLegado">
                         <div id="camposFinanceiros">
                             <div class="row mb-3">
                                 <div class="col-md-4"><label class="form-label">Valor Garagem (R$)</label><input class="form-control" type="number" id="vGaragem" step="0.01" value="0"></div>
@@ -55,7 +58,9 @@
                         </div>
                         <div class="row mb-4">
                             <div class="col-md-6"><label class="fw-bold form-label">KM Rodado</label><input class="form-control" type="number" id="kmRodado" required="" step="0.01" value="0"></div>
-                        </div><button class="btn btn-primary-custom" type="submit">Salvar Lançamento</button>
+                        </div>
+                        </div>
+                        <button class="btn btn-primary-custom" id="btnSalvarLancamento" type="submit">Salvar Lançamento</button>
                         <div class="fw-bold text-success mt-3" id="msgSucesso" style="display:none;"><span>Lançamento salvo com sucesso!</span></div>
                     </form>
                 </div>

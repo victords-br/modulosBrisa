@@ -36,6 +36,18 @@
 
                 <div id="mensagem" class="alert d-none" role="status" aria-live="polite"></div>
 
+                <section class="card p-3 card-modern mb-4" aria-labelledby="tituloTarifas">
+                    <h3 class="h5 fw-bold mb-1" id="tituloTarifas">Tarifas por passageiro</h3>
+                    <p class="small text-muted mb-3">Os valores são aplicados às quantidades informadas em cada viagem quando o lançamento é salvo.</p>
+                    <form id="formTarifas" class="row g-3 align-items-end">
+                        <div class="col-6 col-lg-3"><label class="form-label" for="tarifaComum">Comum (R$)</label><input class="form-control" id="tarifaComum" type="number" min="0" step="0.01" required></div>
+                        <div class="col-6 col-lg-3"><label class="form-label" for="tarifaEscolar">Escolar (R$)</label><input class="form-control" id="tarifaEscolar" type="number" min="0" step="0.01" required></div>
+                        <div class="col-6 col-lg-3"><label class="form-label" for="tarifaPagantes">Pagantes (R$)</label><input class="form-control" id="tarifaPagantes" type="number" min="0" step="0.01" required></div>
+                        <div class="col-6 col-lg-3"><label class="form-label" for="tarifaVt">VT (R$)</label><input class="form-control" id="tarifaVt" type="number" min="0" step="0.01" required></div>
+                        <div class="col-12"><button class="btn btn-primary-custom" id="btnSalvarTarifas" type="submit">Salvar tarifas</button><span class="small text-muted ms-2" id="statusTarifas" role="status" aria-live="polite"></span></div>
+                    </form>
+                </section>
+
                 <section class="card p-3 card-modern" aria-label="Lista de usuários">
                     <div class="row g-2 align-items-center mb-3">
                         <div class="col-sm-8 col-lg-5">

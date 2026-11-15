@@ -8,6 +8,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let usuarioLogado = null;
     let setorUsuario = '';
     let idLancamentoEdicao = null;
+    let escalasLancamento = [];
+    let sequenciaCarregamentoViagens = 0;
 
     // ==========================================
     // 1. INICIALIZAÇÃO E VERIFICAÇÃO DE PERFIL
@@ -57,6 +59,119 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
         }
+    }
+
+    function escaparHtml(valor) {
+        return String(valor ?? '').replace(/[&<>"']/g, caractere => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+        })[caractere]);
+    }
+
+    function formatarHoraLancamento(hora) {
+        return hora ? String(hora).slice(0, 5) : '--:--';
+    }
+
+    async function carregarViagensLancamento() {
+        const lista = document.getElementById('listaViagens');
+        const status = document.getElementById('statusViagens');
+        const dataOp = document.getElementById('dataOp').value;
+        const linhaId = document.getElementById('linha').value;
+        const sequencia = ++sequenciaCarregamentoViagens;
+        const botaoSalvar = document.getElementById('btnSalvarLancamento');
+        escalasLancamento = [];
+
+        if (!lista || !dataOp || !linhaId) {
+            if (lista) lista.innerHTML = '';
+            if (botaoSalvar) botaoSalvar.disabled = false;
+            if (status) status.textContent = 'Selecione a data e a linha para carregar as viagens da escala.';
+            return;
+        }
+
+        lista.innerHTML = '';
+        if (botaoSalvar) botaoSalvar.disabled = true;
+        if (status) status.textContent = 'Carregando viagens da escala...';
+        const [resultadoEscalas, resultadoLancamentos] = await Promise.all([
+            window.supabaseClient.from('escalas_trabalho')
+                .select('id, hora_inicio, hora_fim')
+                .eq('data_escala', dataOp)
+                .eq('linha_id', Number(linhaId))
+                .order('hora_inicio'),
+            window.supabaseClient.rpc('listar_lancamentos_dashboard', {
+                p_linha_id: Number(linhaId),
+                p_data_inicio: dataOp,
+                p_data_fim: dataOp
+            })
+        ]);
+
+        if (sequencia !== sequenciaCarregamentoViagens) return;
+        if (resultadoEscalas.error) {
+            console.error('Erro ao carregar viagens da escala:', resultadoEscalas.error);
+            document.getElementById('camposLancamentoLegado').style.display = 'none';
+            if (status) status.textContent = 'Não foi possível carregar as viagens da escala.';
+            return;
+        }
+        if (resultadoLancamentos.error) {
+            console.error('Erro ao carregar lançamentos por viagem:', resultadoLancamentos.error);
+            document.getElementById('camposLancamentoLegado').style.display = 'none';
+            if (status) status.textContent = 'Não foi possível conferir os lançamentos existentes. Atualize a tela e tente novamente.';
+            return;
+        }
+
+        const lancamentosPorEscala = new Map((resultadoLancamentos.data || [])
+            .filter(item => item.escala_id)
+            .map(item => [String(item.escala_id), item]));
+        escalasLancamento = resultadoEscalas.data || [];
+
+        if (setorUsuario === 'Operacional') {
+            escalasLancamento = [];
+            lista.innerHTML = '';
+            document.getElementById('camposLancamentoLegado').style.display = 'block';
+            document.getElementById('kmRodado').required = true;
+            if (botaoSalvar) botaoSalvar.disabled = false;
+            if (status) status.textContent = 'A escala possui viagens neste dia. Use os campos operacionais para complementar o lançamento.';
+            return;
+        }
+
+        if (escalasLancamento.length === 0) {
+            lista.innerHTML = '';
+            document.getElementById('camposLancamentoLegado').style.display = 'block';
+            document.getElementById('kmRodado').required = true;
+            document.getElementById('btnSalvarLancamento').textContent = 'Salvar Lançamento';
+            if (botaoSalvar) botaoSalvar.disabled = false;
+            if (status) status.textContent = 'Não há viagens cadastradas na escala para esta linha e data.';
+            return;
+        }
+
+        document.getElementById('camposLancamentoLegado').style.display = 'none';
+        document.getElementById('kmRodado').required = false;
+        document.getElementById('btnSalvarLancamento').textContent = 'Salvar Lançamentos por Viagem';
+        if (botaoSalvar) botaoSalvar.disabled = false;
+        if (status) status.textContent = `${escalasLancamento.length} ${escalasLancamento.length === 1 ? 'viagem carregada' : 'viagens carregadas'} da escala.`;
+        lista.innerHTML = `<div class="table-responsive"><table class="table table-sm table-bordered align-middle mb-0">
+            <thead class="table-light"><tr>
+                <th>Horário da escala</th><th>Garagem (R$)</th><th>City (R$)</th><th>Excesso (R$)</th>
+                <th>Comum (qtd.)</th><th>Escolar (qtd.)</th><th>Pagantes (qtd.)</th><th>VT (qtd.)</th><th>KM</th>
+            </tr></thead><tbody>${escalasLancamento.map(escala => {
+                const id = String(escala.id);
+                const lancamento = lancamentosPorEscala.get(id) || {};
+                const entrada = (campo, valor) => `<input class="form-control form-control-sm" type="number" min="0" step="0.01" data-campo="${campo}" value="${Number(valor || 0)}" aria-label="${campo} da viagem ${formatarHoraLancamento(escala.hora_inicio)}">`;
+                const quantidade = (campo, valor) => `<input class="form-control form-control-sm" type="number" min="0" step="1" data-campo="${campo}" value="${Number(valor || 0)}" aria-label="${campo} da viagem ${formatarHoraLancamento(escala.hora_inicio)}">`;
+                return `<tr data-escala-id="${escaparHtml(id)}" data-lancamento-id="${escaparHtml(lancamento.id || '')}">
+                    <th class="text-nowrap">${escaparHtml(formatarHoraLancamento(escala.hora_inicio))} - ${escaparHtml(formatarHoraLancamento(escala.hora_fim))}</th>
+                    <td>${entrada('valor_garagem', lancamento.valor_garagem)}</td>
+                    <td>${entrada('valor_city', lancamento.valor_city)}</td>
+                    <td>${entrada('valor_excesso', lancamento.valor_excesso)}</td>
+                    <td>${quantidade('quantidade_comum', lancamento.quantidade_comum)}</td>
+                    <td>${quantidade('quantidade_escolar', lancamento.quantidade_escolar)}</td>
+                    <td>${quantidade('quantidade_pagantes', lancamento.quantidade_pagantes)}</td>
+                    <td>${quantidade('quantidade_vt', lancamento.quantidade_vt)}</td>
+                    <td>${entrada('km_rodado', lancamento.km_rodado)}</td>
+                </tr>`;
+            }).join('')}</tbody></table></div>`;
     }
 
     // ==========================================
@@ -148,6 +263,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // ==========================================
     const formLancamento = document.getElementById('formLancamento');
     if (formLancamento) {
+        document.getElementById('dataOp').addEventListener('change', carregarViagensLancamento);
+        document.getElementById('linha').addEventListener('change', carregarViagensLancamento);
+
         formLancamento.addEventListener('submit', async (e) => {
             e.preventDefault();
             const btnSubmit = e.target.querySelector('button[type="submit"]');
@@ -189,10 +307,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            const { error } = await window.supabaseClient.rpc('salvar_lancamento', {
-                p_lancamento_id: idLancamentoEdicao,
-                p_dados: dadosLancamento
-            });
+            let error;
+            if (escalasLancamento.length) {
+                const viagens = [...document.querySelectorAll('#listaViagens tbody tr[data-escala-id]')].map(linhaViagem => {
+                    const valores = Object.fromEntries([...linhaViagem.querySelectorAll('[data-campo]')]
+                        .map(campo => [campo.dataset.campo, Number(campo.value || 0)]));
+                    return { escala_id: linhaViagem.dataset.escalaId, ...valores };
+                });
+                ({ error } = await window.supabaseClient.rpc('salvar_lancamentos_por_viagem', {
+                    p_data_op: dadosLancamento.data_op,
+                    p_linha_id: dadosLancamento.linha_id,
+                    p_viagens: viagens
+                }));
+            } else {
+                ({ error } = await window.supabaseClient.rpc('salvar_lancamento', {
+                    p_lancamento_id: idLancamentoEdicao,
+                    p_dados: dadosLancamento
+                }));
+            }
 
             btnSubmit.disabled = false;
 
@@ -206,6 +338,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 formLancamento.reset();
                 idLancamentoEdicao = null;
+                await carregarViagensLancamento();
                 document.getElementById('tituloPagina').textContent = 'Novo Lançamento';
                 btnSubmit.textContent = 'Salvar Lançamento';
                 
@@ -238,44 +371,78 @@ document.addEventListener('DOMContentLoaded', () => {
         tbody.innerHTML = '';
 
         if (!error && data) {
+            const grupos = new Map();
             data.forEach(item => {
-                const podeEditar = operacional || ['Administração', 'Financeiro', 'TI'].includes(setorUsuario);
-                const btnAcao = podeEditar
-                    ? `<button class="btn btn-sm btn-outline-primary" onclick="prepararEdicao('${item.id}')">Editar</button>` 
-                    : '';
-                
-                const nomeDaLinha = item.linhas ? item.linhas.nome : 'Linha Excluída';
+                const chave = `${item.data_op}:${item.linha_id}`;
+                if (!grupos.has(chave)) grupos.set(chave, []);
+                grupos.get(chave).push(item);
+            });
+
+            const moeda = valor => `R$ ${Number(valor || 0).toFixed(2)}`;
+            const numero = (itens, campo) => itens.reduce((total, item) => total + Number(item[campo] || 0), 0);
+            [...grupos.values()].forEach((itens, indice) => {
+                const primeiro = itens[0];
+                const nomeDaLinha = escaparHtml(primeiro.linhas?.nome || 'Linha Excluída');
+                const dataFormatada = new Date(primeiro.data_op + 'T00:00:00').toLocaleDateString('pt-BR');
+                const colspan = operacional ? 5 : 12;
+                const botaoDetalhes = `<button class="btn btn-sm btn-outline-secondary" type="button" data-expandir="detalhes-${indice}" aria-expanded="false">${itens.length} viagem(ns)</button>`;
+                const nomeClicavel = `<button class="btn btn-link p-0 text-start" type="button" data-expandir="detalhes-${indice}" aria-expanded="false">${nomeDaLinha}</button>`;
+                let linhaResumo;
 
                 if (operacional) {
-                    tbody.innerHTML += `
-                        <tr>
-                            <td>${new Date(item.data_op + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
-                            <td>${nomeDaLinha}</td>
-                            <td>R$ ${(item.valor_excesso || 0).toFixed(2)}</td>
-                            <td>${item.km_rodado || 0} km</td>
-                            <td>${btnAcao}</td>
-                        </tr>
-                    `;
-                    return;
+                    linhaResumo = `<tr>
+                        <td>${dataFormatada}</td><td>${nomeClicavel}</td>
+                        <td>${moeda(numero(itens, 'valor_excesso'))}</td>
+                        <td>${numero(itens, 'km_rodado').toFixed(2)} km</td><td>${botaoDetalhes}</td>
+                    </tr>`;
+                } else {
+                    linhaResumo = `<tr>
+                        <td>${dataFormatada}</td><td>${nomeClicavel}</td>
+                        <td>${moeda(numero(itens, 'valor_garagem'))}</td><td>${moeda(numero(itens, 'valor_city'))}</td>
+                        <td>${moeda(numero(itens, 'valor_excesso'))}</td><td>${moeda(numero(itens, 'comum'))}</td>
+                        <td>${moeda(numero(itens, 'escolar'))}</td><td>${moeda(numero(itens, 'pagantes'))}</td>
+                        <td>${moeda(numero(itens, 'vt'))}</td><td>${numero(itens, 'km_rodado').toFixed(2)} km</td>
+                        <td class="fw-bold text-success">${moeda(numero(itens, 'valor_total'))}</td><td>${botaoDetalhes}</td>
+                    </tr>`;
                 }
 
-                tbody.innerHTML += `
-                    <tr>
-                        <td>${new Date(item.data_op + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
-                        <td>${nomeDaLinha}</td>
-                        <td>R$ ${(item.valor_garagem || 0).toFixed(2)}</td>
-                        <td>R$ ${(item.valor_city || 0).toFixed(2)}</td>
-                        <td>R$ ${(item.valor_excesso || 0).toFixed(2)}</td>
-                        <td>R$ ${(item.comum || 0).toFixed(2)}</td>
-                        <td>R$ ${(item.escolar || 0).toFixed(2)}</td>
-                        <td>R$ ${(item.pagantes || 0).toFixed(2)}</td>
-                        <td>R$ ${(item.vt || 0).toFixed(2)}</td>
-                        <td>${item.km_rodado} km</td>
-                        <td class="fw-bold text-success">R$ ${(item.valor_total || 0).toFixed(2)}</td>
-                        <td>${btnAcao}</td>
-                    </tr>
-                `;
+                const detalhes = itens.map(item => {
+                    const horario = `${formatarHoraLancamento(item.hora_inicio)} - ${formatarHoraLancamento(item.hora_fim)}`;
+                    const botaoEditar = (operacional || ['Administração', 'Financeiro', 'TI'].includes(setorUsuario))
+                        ? `<button class="btn btn-sm btn-outline-primary" type="button" data-editar-lancamento="${escaparHtml(item.id)}">Editar</button>`
+                        : '';
+                    if (operacional) {
+                        return `<tr><td>${escaparHtml(horario)}</td><td>${moeda(item.valor_excesso)}</td><td>${Number(item.km_rodado || 0).toFixed(2)} km</td><td>${botaoEditar}</td></tr>`;
+                    }
+                    return `<tr>
+                        <td>${escaparHtml(horario)}</td><td>${moeda(item.valor_garagem)}</td><td>${moeda(item.valor_city)}</td>
+                        <td>${moeda(item.valor_excesso)}</td><td>${Number(item.quantidade_comum || 0)}</td><td>${moeda(item.comum)}</td>
+                        <td>${Number(item.quantidade_escolar || 0)}</td><td>${moeda(item.escolar)}</td>
+                        <td>${Number(item.quantidade_pagantes || 0)}</td><td>${moeda(item.pagantes)}</td>
+                        <td>${Number(item.quantidade_vt || 0)}</td><td>${moeda(item.vt)}</td>
+                        <td>${Number(item.km_rodado || 0).toFixed(2)} km</td><td>${botaoEditar}</td>
+                    </tr>`;
+                }).join('');
+                const cabecalhoDetalhes = operacional
+                    ? '<tr><th>Horário</th><th>Excesso</th><th>KM</th><th>Ações</th></tr>'
+                    : '<tr><th>Horário</th><th>Garagem</th><th>City</th><th>Excesso</th><th>Comum qtd.</th><th>Comum R$</th><th>Escolar qtd.</th><th>Escolar R$</th><th>Pagantes qtd.</th><th>Pagantes R$</th><th>VT qtd.</th><th>VT R$</th><th>KM</th><th>Ações</th></tr>';
+                tbody.insertAdjacentHTML('beforeend', `${linhaResumo}<tr id="detalhes-${indice}" class="table-light" style="display:none"><td colspan="${colspan}"><div class="table-responsive"><table class="table table-sm table-bordered align-middle mb-0"><thead>${cabecalhoDetalhes}</thead><tbody>${detalhes}</tbody></table></div></td></tr>`);
             });
+
+            if (!tbody.dataset.acoesDetalhes) {
+                tbody.addEventListener('click', event => {
+                    const expandir = event.target.closest('button[data-expandir]');
+                    if (expandir) {
+                        const linhaDetalhes = document.getElementById(expandir.dataset.expandir);
+                        const aberto = linhaDetalhes.style.display !== 'none';
+                        linhaDetalhes.style.display = aberto ? 'none' : '';
+                        expandir.setAttribute('aria-expanded', String(!aberto));
+                    }
+                    const editar = event.target.closest('button[data-editar-lancamento]');
+                    if (editar) window.prepararEdicao(editar.dataset.editarLancamento);
+                });
+                tbody.dataset.acoesDetalhes = 'true';
+            }
         }
     }
 
@@ -297,6 +464,14 @@ document.addEventListener('DOMContentLoaded', () => {
             
             document.getElementById('dataOp').value = data.data_op;
             document.getElementById('linha').value = data.linha_id; // Seleciona o ID correto no select
+            await carregarViagensLancamento();
+            if (!data.escala_id) {
+                escalasLancamento = [];
+                document.getElementById('listaViagens').innerHTML = '';
+                document.getElementById('camposLancamentoLegado').style.display = 'block';
+                document.getElementById('kmRodado').required = true;
+                document.getElementById('btnSalvarLancamento').textContent = 'Atualizar Lançamento';
+            }
             document.getElementById('vGaragem').value = data.valor_garagem;
             document.getElementById('vCity').value = data.valor_city;
             document.getElementById('vExcesso').value = data.valor_excesso;
