@@ -80,12 +80,13 @@
         td { padding: 10px 9px; border-bottom: 1px solid #e3e9e6; font-size: 12px; overflow-wrap: anywhere; vertical-align: top; }
         tbody tr:nth-child(even) { background: #f6f8f7; }
         .horario { color: #285f55; font-weight: 700; white-space: nowrap; }
-        th:nth-child(1) { width: 13%; }
-        th:nth-child(2) { width: 19%; }
-        th:nth-child(3) { width: 10%; }
-        th:nth-child(4) { width: 16%; }
-        th:nth-child(5) { width: 16%; }
-        th:nth-child(6) { width: 26%; }
+        th:nth-child(1) { width: 10%; }
+        th:nth-child(2) { width: 17%; }
+        th:nth-child(3) { width: 9%; }
+        th:nth-child(4) { width: 11%; }
+        th:nth-child(5) { width: 15%; }
+        th:nth-child(6) { width: 15%; }
+        th:nth-child(7) { width: 23%; }
 
         .rodape { display: flex; justify-content: space-between; gap: 12px; margin-top: 18px; padding-top: 10px; border-top: 1px solid #dce5e1; color: #74817d; font-size: 10px; }
 
@@ -135,7 +136,7 @@
             <div class="tabela-wrap">
                 <table>
                     <thead>
-                        <tr><th>Horário</th><th>Motorista</th><th>Matrícula</th><th>Linha</th><th>Carro / Ordem</th><th>Trajeto</th></tr>
+                        <tr><th>Horário</th><th>Motorista titular / substituto</th><th>Matrícula</th><th>Escala</th><th>Linha</th><th>Carro / Ordem</th><th>Trajeto</th></tr>
                     </thead>
                     <tbody id="linhasEscala"></tbody>
                 </table>
@@ -172,7 +173,7 @@
             const corpoTabela = document.getElementById('linhasEscala');
             dados.escalas.forEach(escala => {
                 const linha = document.createElement('tr');
-                [escala.horario, escala.motorista, escala.matricula, escala.linha, escala.carro, escala.trajeto].forEach((valor, indice) => {
+                [escala.horario, escala.motorista, escala.matricula, escala.codigoEscala, escala.linha, escala.carro, escala.trajeto].forEach((valor, indice) => {
                     const celula = document.createElement('td');
                     celula.textContent = valor;
                     if (indice === 0) celula.className = 'horario';

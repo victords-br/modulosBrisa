@@ -48,6 +48,25 @@
                     </form>
                 </section>
 
+                <section class="card p-3 card-modern mb-4" aria-labelledby="tituloRegrasFolga">
+                    <h3 class="h5 fw-bold mb-1" id="tituloRegrasFolga">Regras de ciclo de trabalho e folga</h3>
+                    <p class="small text-muted mb-3">Configure modelos reutilizáveis. Use T para trabalho e F para folga; o padrão se repete a partir do início de vigência de cada escala. Um 6x1 que se repete a cada 7 dias mantém a folga no mesmo dia da semana. Para alternar sábados e domingos, cadastre o ciclo completo (até 56 dias); essa alternância pode exigir folgas adicionais. Confira o calendário e valide a regra antes de aplicar.</p>
+                    <form id="formRegraFolga" class="row g-3 align-items-end mb-3">
+                        <input id="regraFolgaId" type="hidden">
+                        <div class="col-md-3"><label class="form-label" for="regraFolgaCodigo">Código</label><input class="form-control" id="regraFolgaCodigo" type="text" maxlength="30" pattern="[a-z0-9_-]{2,30}" placeholder="5x1" required></div>
+                        <div class="col-md-4"><label class="form-label" for="regraFolgaNome">Nome</label><input class="form-control" id="regraFolgaNome" type="text" maxlength="80" required></div>
+                        <div class="col-md-5"><label class="form-label" for="regraFolgaPadrao">Ciclo (T = trabalha, F = folga)</label><input class="form-control text-uppercase" id="regraFolgaPadrao" type="text" maxlength="56" pattern="(?=.*T)(?=.*F)[TFtf]{2,56}" placeholder="TTTTTF" required><div class="form-text">Ex.: TTTTTF é 5x1; TTTTTTF é 6x1. Ciclos longos podem ter até 56 dias.</div></div>
+                        <div class="col-12"><div class="form-check"><input class="form-check-input" id="regraFolgaAtiva" type="checkbox" checked><label class="form-check-label" for="regraFolgaAtiva">Regra disponível para novas escalas</label></div></div>
+                        <div class="col-12"><button class="btn btn-primary-custom" id="btnSalvarRegraFolga" type="submit">Salvar regra</button><button class="btn btn-outline-secondary ms-2 d-none" id="btnCancelarEdicaoRegraFolga" type="button">Cancelar edição</button><span class="small ms-2" id="statusRegrasFolga" role="status" aria-live="polite"></span></div>
+                    </form>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light"><tr><th>Código</th><th>Nome</th><th>Ciclo</th><th>Status</th><th class="text-end">Ações</th></tr></thead>
+                            <tbody id="corpoRegrasFolga"><tr><td class="text-center text-muted py-3" colspan="5">Carregando regras...</td></tr></tbody>
+                        </table>
+                    </div>
+                </section>
+
                 <section class="card p-3 card-modern" aria-label="Lista de usuários">
                     <div class="row g-2 align-items-center mb-3">
                         <div class="col-sm-8 col-lg-5">

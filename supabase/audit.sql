@@ -91,4 +91,24 @@ CREATE TRIGGER audit_escalas_changes
 AFTER INSERT OR UPDATE OR DELETE ON public.escalas_trabalho
 FOR EACH ROW EXECUTE FUNCTION public.audit_operational_change();
 
+DO $$
+DECLARE
+    v_tabela text;
+BEGIN
+    FOREACH v_tabela IN ARRAY ARRAY['escalas_operacionais', 'regras_folga_escalas', 'folgas_escalas', 'substituicoes_escalas']
+    LOOP
+        IF to_regclass(format('public.%I', v_tabela)) IS NOT NULL THEN
+            EXECUTE format(
+                'DROP TRIGGER IF EXISTS %I ON public.%I',
+                'audit_' || v_tabela || '_changes', v_tabela
+            );
+            EXECUTE format(
+                'CREATE TRIGGER %I AFTER INSERT OR UPDATE OR DELETE ON public.%I FOR EACH ROW EXECUTE FUNCTION public.audit_operational_change()',
+                'audit_' || v_tabela || '_changes', v_tabela
+            );
+        END IF;
+    END LOOP;
+END;
+$$;
+
 NOTIFY pgrst, 'reload schema';

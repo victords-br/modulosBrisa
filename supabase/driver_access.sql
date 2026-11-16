@@ -11,6 +11,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS perfis_funcionario_id_unique
 ON public.perfis (funcionario_id)
 WHERE funcionario_id IS NOT NULL;
 
+DROP FUNCTION IF EXISTS public.minhas_escalas_motorista(date, date);
+
 CREATE OR REPLACE FUNCTION public.minhas_escalas_motorista(
     p_data_inicio date DEFAULT CURRENT_DATE,
     p_data_fim date DEFAULT NULL
@@ -24,7 +26,9 @@ RETURNS TABLE (
     numero_ordem text,
     modelo text,
     local_inicio text,
-    local_final text
+    local_final text,
+    codigo_escala text,
+    em_substituicao boolean
 )
 LANGUAGE plpgsql
 STABLE
@@ -57,11 +61,17 @@ BEGIN
         c.numero_ordem,
         c.modelo,
         e.local_inicio,
-        e.local_final
+        e.local_final,
+        eo.codigo,
+        coalesce(s.motorista_substituto_id, e.motorista_substituto_id) IS NOT NULL
     FROM public.escalas_trabalho e
     LEFT JOIN public.linhas l ON l.id = e.linha_id
     LEFT JOIN public.carros c ON c.id = e.carro_id
-    WHERE e.motorista_id = v_funcionario_id
+    LEFT JOIN public.escalas_operacionais eo ON eo.id = e.escala_operacional_id
+    LEFT JOIN public.substituicoes_escalas s
+        ON s.escala_operacional_id = e.escala_operacional_id
+       AND s.data_substituicao = e.data_escala
+    WHERE coalesce(s.motorista_substituto_id, e.motorista_substituto_id, e.motorista_id) = v_funcionario_id
       AND (p_data_inicio IS NULL OR e.data_escala >= p_data_inicio)
       AND (p_data_fim IS NULL OR e.data_escala <= p_data_fim)
     ORDER BY e.data_escala, e.hora_inicio;

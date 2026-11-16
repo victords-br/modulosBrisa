@@ -17,10 +17,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     const driverSelect = document.getElementById('usuarioFuncionarioId');
     const driverLinkWrap = document.getElementById('vinculoMotoristaWrap');
     const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('modalUsuario'));
+    const formRule = document.getElementById('formRegraFolga');
+    const rulesBody = document.getElementById('corpoRegrasFolga');
+    const rulesStatus = document.getElementById('statusRegrasFolga');
     let users = [];
     let sectors = [];
     let drivers = [];
     let driverListAvailable = false;
+    let rules = [];
 
     document.getElementById('infoUsuario').textContent = `${context.profile.nome || context.session.user.email} - ${context.sector}`;
 
@@ -57,6 +61,48 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('tarifaEscolar').value = data.valor_escolar;
         document.getElementById('tarifaPagantes').value = data.valor_pagantes;
         document.getElementById('tarifaVt').value = data.valor_vt;
+    }
+
+    function renderRules() {
+        rulesBody.innerHTML = rules.length
+            ? rules.map(rule => `<tr>
+                <td class="fw-semibold">${escapeHtml(rule.codigo)}</td>
+                <td>${escapeHtml(rule.nome)}</td>
+                <td><code>${escapeHtml(rule.padrao_ciclo)}</code> <span class="small text-muted">(${rule.padrao_ciclo.length} dias)</span></td>
+                <td>${rule.ativa ? '<span class="text-success">Ativa</span>' : '<span class="text-muted">Inativa</span>'}</td>
+                <td class="text-end text-nowrap">
+                    <button class="btn btn-sm btn-outline-primary me-1" type="button" data-rule-action="edit" data-rule-id="${escapeHtml(rule.id)}">Editar</button>
+                    <button class="btn btn-sm btn-outline-danger" type="button" data-rule-action="delete" data-rule-id="${escapeHtml(rule.id)}">Excluir</button>
+                </td>
+            </tr>`).join('')
+            : '<tr><td class="text-center text-muted py-3" colspan="5">Nenhuma regra cadastrada.</td></tr>';
+    }
+
+    async function loadRules() {
+        const { data, error } = await window.supabaseClient
+            .from('regras_folga_escalas')
+            .select('id, codigo, nome, padrao_ciclo, ativa')
+            .order('codigo');
+
+        if (error) {
+            rulesStatus.textContent = `Não foi possível carregar as regras: ${error.message}. Confira se escalas_operacionais.sql foi aplicada.`;
+            rulesStatus.className = 'small text-danger ms-2';
+            rulesBody.innerHTML = '<tr><td class="text-center text-danger py-3" colspan="5">Falha ao carregar regras.</td></tr>';
+            return false;
+        }
+
+        rules = data || [];
+        rulesStatus.textContent = '';
+        renderRules();
+        return true;
+    }
+
+    function resetRuleForm() {
+        formRule.reset();
+        document.getElementById('regraFolgaId').value = '';
+        document.getElementById('regraFolgaAtiva').checked = true;
+        document.getElementById('btnSalvarRegraFolga').textContent = 'Salvar regra';
+        document.getElementById('btnCancelarEdicaoRegraFolga').classList.add('d-none');
     }
 
     async function invokeAdmin(action, payload = {}) {
@@ -220,6 +266,81 @@ document.addEventListener('DOMContentLoaded', async () => {
         status.className = `small ${error ? 'text-danger' : 'text-success'} ms-2`;
     });
 
+    formRule.addEventListener('submit', async event => {
+        event.preventDefault();
+        const saveButton = document.getElementById('btnSalvarRegraFolga');
+        const padrao = document.getElementById('regraFolgaPadrao').value.toUpperCase();
+        const status = rulesStatus;
+        const payload = {
+            codigo: document.getElementById('regraFolgaCodigo').value.trim().toLowerCase(),
+            nome: document.getElementById('regraFolgaNome').value.trim(),
+            padrao_ciclo: padrao,
+            ativa: document.getElementById('regraFolgaAtiva').checked
+        };
+        const ruleId = document.getElementById('regraFolgaId').value;
+
+        if (!/^[TF]{2,56}$/.test(padrao) || !padrao.includes('T') || !padrao.includes('F')) {
+            status.textContent = 'O ciclo deve conter de 2 a 56 caracteres T/F e incluir trabalho e folga.';
+            status.className = 'small text-danger ms-2';
+            return;
+        }
+
+        saveButton.disabled = true;
+        status.textContent = 'Salvando...';
+        status.className = 'small text-muted ms-2';
+        try {
+            const query = ruleId
+                ? window.supabaseClient.from('regras_folga_escalas').update(payload).eq('id', ruleId)
+                : window.supabaseClient.from('regras_folga_escalas').insert(payload);
+            const { error } = await query;
+            if (error) throw error;
+            resetRuleForm();
+            if (await loadRules()) {
+                status.textContent = 'Regra salva.';
+                status.className = 'small text-success ms-2';
+            }
+        } catch (error) {
+            status.textContent = `Falha ao salvar: ${error.message}`;
+            status.className = 'small text-danger ms-2';
+        } finally {
+            saveButton.disabled = false;
+        }
+    });
+
+    document.getElementById('btnCancelarEdicaoRegraFolga').addEventListener('click', resetRuleForm);
+    rulesBody.addEventListener('click', async event => {
+        const button = event.target.closest('button[data-rule-action]');
+        if (!button) return;
+        const rule = rules.find(item => item.id === button.dataset.ruleId);
+        if (!rule) return;
+
+        if (button.dataset.ruleAction === 'edit') {
+            document.getElementById('regraFolgaId').value = rule.id;
+            document.getElementById('regraFolgaCodigo').value = rule.codigo;
+            document.getElementById('regraFolgaNome').value = rule.nome;
+            document.getElementById('regraFolgaPadrao').value = rule.padrao_ciclo;
+            document.getElementById('regraFolgaAtiva').checked = rule.ativa;
+            document.getElementById('btnSalvarRegraFolga').textContent = 'Atualizar regra';
+            document.getElementById('btnCancelarEdicaoRegraFolga').classList.remove('d-none');
+            formRule.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+        }
+
+        if (!window.confirm(`Excluir a regra ${rule.codigo}? Escalas que a utilizam ficarão sem regra vinculada.`)) return;
+        button.disabled = true;
+        const { error } = await window.supabaseClient
+            .from('regras_folga_escalas')
+            .delete()
+            .eq('id', rule.id);
+        if (error) {
+            rulesStatus.textContent = `Falha ao excluir: ${error.message}`;
+            rulesStatus.className = 'small text-danger ms-2';
+            button.disabled = false;
+            return;
+        }
+        await loadRules();
+    });
+
     usersBody.addEventListener('click', async event => {
         const button = event.target.closest('button[data-action]');
         if (!button) return;
@@ -281,5 +402,5 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    await Promise.all([loadUsers(), loadTariffs()]);
+    await Promise.all([loadUsers(), loadTariffs(), loadRules()]);
 });

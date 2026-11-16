@@ -1,5 +1,15 @@
 # Administração de usuários de TI
 
+## Escalas por código, viagens e folgas
+
+1. Execute `escalas_operacionais.sql` no SQL Editor depois de `role_permissions.sql`. O script cria os cadastros de escala operacional e regra de folga, adiciona o vínculo opcional das viagens existentes, registra substituições e protege o titular e a vigência no banco.
+2. Execute novamente `driver_access.sql` depois da migração para que o motorista substituto também veja as viagens atribuídas a ele.
+3. Na tela TI, configure regras de ciclo usando `T` para trabalho e `F` para folga (por exemplo, `TTTTTF` para 5x1 e `TTTTTTF` para 6x1). O ciclo se repete a partir do início de vigência da escala; é possível cadastrar um padrão de até 56 dias e exceções por data na tela Escala.
+4. Na tela Escala, crie cada código (por exemplo `0022.01`), selecione o motorista titular e a regra. Vincule viagens novas pelo seletor **Escala operacional**. Viagens antigas permanecem preservadas e aparecem como **Sem código** até serem editadas e vinculadas manualmente; não há migração automática porque linha/motorista não determinam com segurança o código da escala.
+5. Em cada cartão de escala, registre o substituto e a data. A substituição vale para todas as viagens daquela escala no dia escolhido; o motorista substituto passa a ver essas viagens em **Minha escala**.
+
+Um padrão 6x1 que simplesmente se repete a cada sete dias mantém a folga no mesmo dia da semana. A alternância entre sábados e domingos precisa de um ciclo personalizado, com todas as folgas e dias trabalhados definidos no período; revise o padrão com a operação antes de aplicá-lo. A configuração não substitui a validação das regras trabalhistas aplicáveis.
+
 ## Acesso do motorista à própria escala
 
 1. Execute `driver_access.sql` no SQL Editor depois de `role_permissions.sql`. O script cria o setor `Motorista`, adiciona o vínculo de funcionário ao perfil e a RPC restrita `minhas_escalas_motorista`.
@@ -16,7 +26,7 @@ O motorista não recebe acesso ao portal nem aos módulos Financeiro, Escala de 
 
 ## Implantar auditoria
 
-1. Execute `audit.sql` no SQL Editor do Supabase. Ela cria a tabela append-only `audit_logs`, libera a leitura somente para TI e adiciona gatilhos para lançamentos e escalas.
+1. Execute `audit.sql` no SQL Editor do Supabase. Ela cria a tabela append-only `audit_logs`, libera a leitura somente para TI e adiciona gatilhos para lançamentos e escalas. Se a auditoria já estava instalada antes de `escalas_operacionais.sql`, execute `audit.sql` novamente para incluir os novos cadastros.
 2. Publique a versão atualizada da função para registrar criação, edição e exclusão de usuários:
 
 ```bash
@@ -59,7 +69,7 @@ A função exige `SUPABASE_SERVICE_ROLE_KEY` no ambiente Edge Functions do proje
 ## Funcionalidades
 
 - Para ativar lançamentos detalhados por viagem, execute `lancamentos_por_viagem.sql` no SQL Editor depois de `role_permissions.sql`. O script cria os campos de vínculo com a escala e quantidades de passageiros, habilita a consulta de escalas pelo Financeiro e instala as funções protegidas de tarifas e gravação.
-- A tela de lançamento usa cada registro de `escalas_trabalho` como uma viagem, considerando linha, data e horário de início/fim. Garagem, City, Excesso e KM são informados por viagem; Comum, Escolar, Pagantes e VT são quantidades multiplicadas pelas tarifas configuradas em TI.
+- Cada registro de `escalas_trabalho` representa uma viagem, com sua própria linha, data e horário; `escala_operacional_id` agrupa viagens em um código sem fixar a escala a uma linha. Garagem, City, Excesso e KM são informados por viagem; Comum, Escolar, Pagantes e VT são quantidades multiplicadas pelas tarifas configuradas em TI.
 - As tarifas iniciais são Comum R$ 4,50, Escolar R$ 2,25, Pagantes R$ 4,80 e VT R$ 4,50. TI pode alterá-las na própria tela de administração. O cálculo ocorre no banco e cada valor final fica salvo no lançamento.
 - listar usuários Auth com nome, setor, status de confirmação e data de criação
 - criar usuários com setor e opção de confirmar o e-mail imediatamente

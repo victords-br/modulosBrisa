@@ -64,7 +64,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <article class="motorista-turno">
                         <div class="motorista-horario">${escapeHtml(shift.hora_inicio?.slice(0, 5) || '--:--')} – ${escapeHtml(shift.hora_fim?.slice(0, 5) || '--:--')}</div>
                         <div>
-                            <div class="motorista-linha">${escapeHtml(shift.linha_nome || 'Linha não informada')}</div>
+                            <div class="motorista-linha">${escapeHtml(shift.codigo_escala ? `Escala ${shift.codigo_escala} · ` : '')}${escapeHtml(shift.linha_nome || 'Linha não informada')}${shift.em_substituicao ? ' · substituição' : ''}</div>
                             <div class="motorista-detalhe">Carro ${escapeHtml(shift.numero_ordem || 'não informado')}${shift.modelo ? ` · ${escapeHtml(shift.modelo)}` : ''}</div>
                             ${(shift.local_inicio || shift.local_final) ? `<div class="motorista-trajeto"><span>Início: ${escapeHtml(shift.local_inicio || '—')}</span><span>Final: ${escapeHtml(shift.local_final || '—')}</span></div>` : ''}
                         </div>

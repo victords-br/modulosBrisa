@@ -31,7 +31,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function labelEntity(entity) {
-        return ({ usuarios: 'Usuários', lancamentos: 'Lançamentos', escalas_trabalho: 'Escalas' })[entity] || entity;
+        return ({
+            usuarios: 'Usuários',
+            lancamentos: 'Lançamentos',
+            escalas_trabalho: 'Viagens',
+            escalas_operacionais: 'Escalas por código',
+            regras_folga_escalas: 'Regras de folga',
+            folgas_escalas: 'Exceções de folga',
+            substituicoes_escalas: 'Substituições'
+        })[entity] || entity;
     }
 
     function showError(text) {
