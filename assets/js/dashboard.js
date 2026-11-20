@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let idLancamentoEdicao = null;
     let escalasLancamento = [];
     let sequenciaCarregamentoViagens = 0;
+    let tarifaLancamentoVt = null;
 
     // ==========================================
     // 1. INICIALIZAÇÃO E VERIFICAÇÃO DE PERFIL
@@ -26,8 +27,25 @@ document.addEventListener('DOMContentLoaded', () => {
         configurarTela(setorUsuario);
 
         await carregarLinhas();
+        await carregarTarifaVt();
         if (setorUsuario === 'Operacional') {
             window.mostrarAba('tabela');
+        }
+    }
+
+    // ==========================================
+    // CARREGAR A TARIFA DE VT (PARA O INDICADOR R$ / KM)
+    // ==========================================
+    async function carregarTarifaVt() {
+        if (setorUsuario === 'Operacional') return;
+
+        const { data, error } = await window.supabaseClient.rpc('obter_tarifa_vt_lancamento');
+        if (error) {
+            console.error('Não foi possível carregar a tarifa de VT. Execute a migração financeiro_km.sql no SQL Editor.', error);
+            return;
+        }
+        if (data !== null && data !== undefined) {
+            tarifaLancamentoVt = Number(data);
         }
     }
 
@@ -153,8 +171,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (status) status.textContent = `${escalasLancamento.length} ${escalasLancamento.length === 1 ? 'viagem carregada' : 'viagens carregadas'} da escala.`;
         lista.innerHTML = `<div class="table-responsive"><table class="table table-sm table-bordered align-middle mb-0">
             <thead class="table-light"><tr>
-                <th>Horário da escala</th><th>Garagem (R$)</th><th>City (R$)</th><th>Excesso (R$)</th>
-                <th>Comum (qtd.)</th><th>Escolar (qtd.)</th><th>Pagantes (qtd.)</th><th>VT (qtd.)</th><th>KM</th>
+                <th>Horário da escala</th><th>Motorista (R$)</th><th>Excesso (R$)</th>
+                <th>Comum (qtd.)</th><th>Escolar (qtd.)</th><th>VT (qtd.)</th><th>KM</th>
             </tr></thead><tbody>${escalasLancamento.map(escala => {
                 const id = String(escala.id);
                 const lancamento = lancamentosPorEscala.get(id) || {};
@@ -163,11 +181,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 return `<tr data-escala-id="${escaparHtml(id)}" data-lancamento-id="${escaparHtml(lancamento.id || '')}">
                     <th class="text-nowrap">${escaparHtml(formatarHoraLancamento(escala.hora_inicio))} - ${escaparHtml(formatarHoraLancamento(escala.hora_fim))}</th>
                     <td>${entrada('valor_garagem', lancamento.valor_garagem)}</td>
-                    <td>${entrada('valor_city', lancamento.valor_city)}</td>
                     <td>${entrada('valor_excesso', lancamento.valor_excesso)}</td>
                     <td>${quantidade('quantidade_comum', lancamento.quantidade_comum)}</td>
                     <td>${quantidade('quantidade_escolar', lancamento.quantidade_escolar)}</td>
-                    <td>${quantidade('quantidade_pagantes', lancamento.quantidade_pagantes)}</td>
                     <td>${quantidade('quantidade_vt', lancamento.quantidade_vt)}</td>
                     <td>${entrada('km_rodado', lancamento.km_rodado)}</td>
                 </tr>`;
@@ -272,11 +288,9 @@ document.addEventListener('DOMContentLoaded', () => {
             btnSubmit.disabled = true;
 
             const vGaragem = document.getElementById('vGaragem').value || 0;
-            const vCity = document.getElementById('vCity').value || 0;
             const vExcesso = document.getElementById('vExcesso').value || 0;
             const comum = document.getElementById('vComum').value || 0;
             const escolar = document.getElementById('vEscolar').value || 0;
-            const pagantes = document.getElementById('vPagantes').value || 0;
             const vt = document.getElementById('vVt').value || 0;
             const linhaId = document.getElementById('linha').value;
 
@@ -291,11 +305,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 data_op: document.getElementById('dataOp').value,
                 linha_id: parseInt(linhaId), 
                 valor_garagem: parseFloat(vGaragem),
-                valor_city: parseFloat(vCity),
                 valor_excesso: parseFloat(vExcesso),
                 comum: parseFloat(comum),
                 escolar: parseFloat(escolar),
-                pagantes: parseFloat(pagantes),
                 vt: parseFloat(vt),
                 km_rodado: parseFloat(document.getElementById('kmRodado').value)
             };
@@ -384,10 +396,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 const primeiro = itens[0];
                 const nomeDaLinha = escaparHtml(primeiro.linhas?.nome || 'Linha Excluída');
                 const dataFormatada = new Date(primeiro.data_op + 'T00:00:00').toLocaleDateString('pt-BR');
-                const colspan = operacional ? 5 : 12;
+                const colspan = operacional ? 5 : 11;
                 const botaoDetalhes = `<button class="btn btn-sm btn-outline-secondary" type="button" data-expandir="detalhes-${indice}" aria-expanded="false">${itens.length} viagem(ns)</button>`;
                 const nomeClicavel = `<button class="btn btn-link p-0 text-start" type="button" data-expandir="detalhes-${indice}" aria-expanded="false">${nomeDaLinha}</button>`;
                 let linhaResumo;
+
+                const totalGrupo = numero(itens, 'valor_total');
+                const kmGrupo = numero(itens, 'km_rodado');
+                const rsPorKm = kmGrupo > 0 ? totalGrupo / kmGrupo : 0;
+                const corRsPorKm = tarifaLancamentoVt !== null
+                    ? (rsPorKm >= tarifaLancamentoVt ? 'fw-bold text-success' : 'fw-bold text-danger')
+                    : '';
 
                 if (operacional) {
                     linhaResumo = `<tr>
@@ -398,11 +417,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else {
                     linhaResumo = `<tr>
                         <td>${dataFormatada}</td><td>${nomeClicavel}</td>
-                        <td>${moeda(numero(itens, 'valor_garagem'))}</td><td>${moeda(numero(itens, 'valor_city'))}</td>
+                        <td>${moeda(numero(itens, 'valor_garagem'))}</td>
                         <td>${moeda(numero(itens, 'valor_excesso'))}</td><td>${moeda(numero(itens, 'comum'))}</td>
-                        <td>${moeda(numero(itens, 'escolar'))}</td><td>${moeda(numero(itens, 'pagantes'))}</td>
+                        <td>${moeda(numero(itens, 'escolar'))}</td>
                         <td>${moeda(numero(itens, 'vt'))}</td><td>${numero(itens, 'km_rodado').toFixed(2)} km</td>
-                        <td class="fw-bold text-success">${moeda(numero(itens, 'valor_total'))}</td><td>${botaoDetalhes}</td>
+                        <td class="fw-bold text-success">${moeda(totalGrupo)}</td>
+                        <td class="${corRsPorKm}">${moeda(rsPorKm)}</td><td>${botaoDetalhes}</td>
                     </tr>`;
                 }
 
@@ -415,17 +435,16 @@ document.addEventListener('DOMContentLoaded', () => {
                         return `<tr><td>${escaparHtml(horario)}</td><td>${moeda(item.valor_excesso)}</td><td>${Number(item.km_rodado || 0).toFixed(2)} km</td><td>${botaoEditar}</td></tr>`;
                     }
                     return `<tr>
-                        <td>${escaparHtml(horario)}</td><td>${moeda(item.valor_garagem)}</td><td>${moeda(item.valor_city)}</td>
+                        <td>${escaparHtml(horario)}</td><td>${moeda(item.valor_garagem)}</td>
                         <td>${moeda(item.valor_excesso)}</td><td>${Number(item.quantidade_comum || 0)}</td><td>${moeda(item.comum)}</td>
                         <td>${Number(item.quantidade_escolar || 0)}</td><td>${moeda(item.escolar)}</td>
-                        <td>${Number(item.quantidade_pagantes || 0)}</td><td>${moeda(item.pagantes)}</td>
                         <td>${Number(item.quantidade_vt || 0)}</td><td>${moeda(item.vt)}</td>
                         <td>${Number(item.km_rodado || 0).toFixed(2)} km</td><td>${botaoEditar}</td>
                     </tr>`;
                 }).join('');
                 const cabecalhoDetalhes = operacional
                     ? '<tr><th>Horário</th><th>Excesso</th><th>KM</th><th>Ações</th></tr>'
-                    : '<tr><th>Horário</th><th>Garagem</th><th>City</th><th>Excesso</th><th>Comum qtd.</th><th>Comum R$</th><th>Escolar qtd.</th><th>Escolar R$</th><th>Pagantes qtd.</th><th>Pagantes R$</th><th>VT qtd.</th><th>VT R$</th><th>KM</th><th>Ações</th></tr>';
+                    : '<tr><th>Horário</th><th>Motorista</th><th>Excesso</th><th>Comum qtd.</th><th>Comum R$</th><th>Escolar qtd.</th><th>Escolar R$</th><th>VT qtd.</th><th>VT R$</th><th>KM</th><th>Ações</th></tr>';
                 tbody.insertAdjacentHTML('beforeend', `${linhaResumo}<tr id="detalhes-${indice}" class="table-light" style="display:none"><td colspan="${colspan}"><div class="table-responsive"><table class="table table-sm table-bordered align-middle mb-0"><thead>${cabecalhoDetalhes}</thead><tbody>${detalhes}</tbody></table></div></td></tr>`);
             });
 
@@ -473,11 +492,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('btnSalvarLancamento').textContent = 'Atualizar Lançamento';
             }
             document.getElementById('vGaragem').value = data.valor_garagem;
-            document.getElementById('vCity').value = data.valor_city;
             document.getElementById('vExcesso').value = data.valor_excesso;
             document.getElementById('vComum').value = data.comum || 0;
             document.getElementById('vEscolar').value = data.escolar || 0;
-            document.getElementById('vPagantes').value = data.pagantes || 0;
             document.getElementById('vVt').value = data.vt || 0;
             document.getElementById('kmRodado').value = data.km_rodado;
 

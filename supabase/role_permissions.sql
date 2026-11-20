@@ -147,7 +147,6 @@ BEGIN
            NEW.data_op,
            NEW.setor_id,
            NEW.valor_garagem,
-           NEW.valor_city,
            NEW.comum,
            NEW.escolar,
            NEW.pagantes,
@@ -156,7 +155,6 @@ BEGIN
            OLD.data_op,
            OLD.setor_id,
            OLD.valor_garagem,
-           OLD.valor_city,
            OLD.comum,
            OLD.escolar,
            OLD.pagantes,
@@ -276,13 +274,12 @@ BEGIN
         END IF;
 
         INSERT INTO public.lancamentos (
-            user_id, setor_id, data_op, linha_id, valor_garagem, valor_city,
+            user_id, setor_id, data_op, linha_id, valor_garagem,
             valor_excesso, comum, escolar, pagantes, vt, km_rodado
         ) VALUES (
             auth.uid(), public.current_user_sector_id(),
             (p_dados->>'data_op')::date, v_linha_id,
             coalesce(nullif(p_dados->>'valor_garagem', '')::numeric, 0),
-            coalesce(nullif(p_dados->>'valor_city', '')::numeric, 0),
             v_valor_excesso,
             coalesce(nullif(p_dados->>'comum', '')::numeric, 0),
             coalesce(nullif(p_dados->>'escolar', '')::numeric, 0),
@@ -309,7 +306,6 @@ BEGIN
         SET data_op = (p_dados->>'data_op')::date,
             linha_id = v_linha_id,
             valor_garagem = coalesce(nullif(p_dados->>'valor_garagem', '')::numeric, 0),
-            valor_city = coalesce(nullif(p_dados->>'valor_city', '')::numeric, 0),
             valor_excesso = v_valor_excesso,
             comum = coalesce(nullif(p_dados->>'comum', '')::numeric, 0),
             escolar = coalesce(nullif(p_dados->>'escolar', '')::numeric, 0),

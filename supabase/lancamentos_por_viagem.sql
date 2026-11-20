@@ -108,7 +108,6 @@ DECLARE
     v_hora_inicio time;
     v_hora_fim time;
     v_valor_garagem numeric;
-    v_valor_city numeric;
     v_valor_excesso numeric;
     v_km_rodado numeric;
     v_quantidade_comum integer;
@@ -150,7 +149,6 @@ BEGIN
         END IF;
 
         v_valor_garagem := coalesce(nullif(v_viagem->>'valor_garagem', '')::numeric, 0);
-        v_valor_city := coalesce(nullif(v_viagem->>'valor_city', '')::numeric, 0);
         v_valor_excesso := coalesce(nullif(v_viagem->>'valor_excesso', '')::numeric, 0);
         v_km_rodado := coalesce(nullif(v_viagem->>'km_rodado', '')::numeric, 0);
         v_quantidade_comum := coalesce(nullif(v_viagem->>'quantidade_comum', '')::integer, 0);
@@ -158,7 +156,7 @@ BEGIN
         v_quantidade_pagantes := coalesce(nullif(v_viagem->>'quantidade_pagantes', '')::integer, 0);
         v_quantidade_vt := coalesce(nullif(v_viagem->>'quantidade_vt', '')::integer, 0);
 
-        IF v_valor_garagem < 0 OR v_valor_city < 0 OR v_valor_excesso < 0 OR v_km_rodado < 0
+        IF v_valor_garagem < 0 OR v_valor_excesso < 0 OR v_km_rodado < 0
            OR v_quantidade_comum < 0 OR v_quantidade_escolar < 0
            OR v_quantidade_pagantes < 0 OR v_quantidade_vt < 0 THEN
             RAISE EXCEPTION 'Valores, quilometragem e quantidades não podem ser negativos.' USING ERRCODE = '22023';
@@ -166,11 +164,11 @@ BEGIN
 
         INSERT INTO public.lancamentos (
             user_id, setor_id, data_op, linha_id, escala_id, hora_inicio, hora_fim,
-            valor_garagem, valor_city, valor_excesso, comum, escolar, pagantes, vt,
+            valor_garagem, valor_excesso, comum, escolar, pagantes, vt,
             quantidade_comum, quantidade_escolar, quantidade_pagantes, quantidade_vt, km_rodado
         ) VALUES (
             auth.uid(), public.current_user_sector_id(), p_data_op, p_linha_id, v_escala_id,
-            v_hora_inicio, v_hora_fim, v_valor_garagem, v_valor_city, v_valor_excesso,
+            v_hora_inicio, v_hora_fim, v_valor_garagem, v_valor_excesso,
             v_quantidade_comum * v_tarifas.valor_comum,
             v_quantidade_escolar * v_tarifas.valor_escolar,
             v_quantidade_pagantes * v_tarifas.valor_pagantes,
@@ -180,7 +178,6 @@ BEGIN
         ON CONFLICT (escala_id) WHERE escala_id IS NOT NULL
         DO UPDATE SET
             valor_garagem = EXCLUDED.valor_garagem,
-            valor_city = EXCLUDED.valor_city,
             valor_excesso = EXCLUDED.valor_excesso,
             comum = EXCLUDED.comum,
             escolar = EXCLUDED.escolar,

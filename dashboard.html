@@ -4,6 +4,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='%234f46e5' d='M12.136.326A1.5 1.5 0 0 1 14 1.78V3h.5A1.5 1.5 0 0 1 16 4.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 0 13.5v-9a1.5 1.5 0 0 1 1.432-1.499zM5.562 3H13V1.78a.5.5 0 0 0-.621-.484zM1.5 4a.5.5 0 0 0-.5.5v9a.5.5 0 0 0 .5.5h13a.5.5 0 0 0 .5-.5v-9a.5.5 0 0 0-.5-.5z'/%3E%3C/svg%3E">
     <title>Painel de Lançamentos</title>
     <link rel="stylesheet" href="assets/bootstrap/css/bootstrap.min.css">
     <link rel="stylesheet" href="assets/css/styles.css">
@@ -45,16 +46,14 @@
                         <div id="camposLancamentoLegado">
                         <div id="camposFinanceiros">
                             <div class="row mb-3">
-                                <div class="col-md-4"><label class="form-label">Valor Garagem (R$)</label><input class="form-control" type="number" id="vGaragem" step="0.01" value="0"></div>
-                                <div class="col-md-4"><label class="form-label">Valor SIT (R$)</label><input class="form-control" type="number" id="vCity" step="0.01" value="0"></div>
-                                <div class="col-md-4"><label class="form-label">Valor Excesso (R$)</label><input class="form-control" type="number" id="vExcesso" step="0.01" value="0"></div>
+                                <div class="col-md-6"><label class="form-label">Valor Motorista (R$)</label><input class="form-control" type="number" id="vGaragem" step="0.01" value="0"></div>
+                                <div class="col-md-6"><label class="form-label">Valor Excesso (R$)</label><input class="form-control" type="number" id="vExcesso" step="0.01" value="0"></div>
                             </div>
                         </div>
                         <div class="row mb-3" id="camposBilhetagem">
-                            <div class="col-md-3"><label class="form-label">Comum</label><input class="form-control" type="number" id="vComum" step="0.01" value="0"></div>
-                            <div class="col-md-3"><label class="form-label">Escolar</label><input class="form-control" type="number" id="vEscolar" step="0.01" value="0"></div>
-                            <div class="col-md-3"><label class="form-label">Pagantes</label><input class="form-control" type="number" id="vPagantes" step="0.01" value="0"></div>
-                            <div class="col-md-3"><label class="form-label">VT</label><input class="form-control" type="number" id="vVt" step="0.01" value="0"></div>
+                            <div class="col-md-4"><label class="form-label">Comum</label><input class="form-control" type="number" id="vComum" step="0.01" value="0"></div>
+                            <div class="col-md-4"><label class="form-label">Escolar</label><input class="form-control" type="number" id="vEscolar" step="0.01" value="0"></div>
+                            <div class="col-md-4"><label class="form-label">VT</label><input class="form-control" type="number" id="vVt" step="0.01" value="0"></div>
                         </div>
                         <div class="row mb-4">
                             <div class="col-md-6"><label class="fw-bold form-label">KM Rodado</label><input class="form-control" type="number" id="kmRodado" required="" step="0.01" value="0"></div>
@@ -71,15 +70,14 @@
                                 <tr>
                                     <th>Data</th>
                                     <th>Linha</th>
-                                    <th>Garagem</th>
-                                    <th>City</th>
+                                    <th>Motorista</th>
                                     <th>Excesso</th>
                                     <th>Comum</th>
                                     <th>Escolar</th>
-                                    <th>Pagantes</th>
                                     <th>VT</th>
                                     <th>KM</th>
                                     <th>Total R$</th>
+                                    <th>R$ / km</th>
                                     <th>Ações</th>
                                 </tr>
                             </thead>
