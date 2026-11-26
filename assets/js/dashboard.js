@@ -171,7 +171,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (status) status.textContent = `${escalasLancamento.length} ${escalasLancamento.length === 1 ? 'viagem carregada' : 'viagens carregadas'} da escala.`;
         lista.innerHTML = `<div class="table-responsive"><table class="table table-sm table-bordered align-middle mb-0">
             <thead class="table-light"><tr>
-                <th>Horário da escala</th><th>Motorista (R$)</th><th>Excesso (R$)</th>
+                <th>Horário da escala</th><th>Motorista (qtd.)</th><th>Excesso (R$)</th>
                 <th>Comum (qtd.)</th><th>Escolar (qtd.)</th><th>VT (qtd.)</th><th>KM</th>
             </tr></thead><tbody>${escalasLancamento.map(escala => {
                 const id = String(escala.id);
@@ -180,7 +180,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const quantidade = (campo, valor) => `<input class="form-control form-control-sm" type="number" min="0" step="1" data-campo="${campo}" value="${Number(valor || 0)}" aria-label="${campo} da viagem ${formatarHoraLancamento(escala.hora_inicio)}">`;
                 return `<tr data-escala-id="${escaparHtml(id)}" data-lancamento-id="${escaparHtml(lancamento.id || '')}">
                     <th class="text-nowrap">${escaparHtml(formatarHoraLancamento(escala.hora_inicio))} - ${escaparHtml(formatarHoraLancamento(escala.hora_fim))}</th>
-                    <td>${entrada('valor_garagem', lancamento.valor_garagem)}</td>
+                    <td>${quantidade('quantidade_motorista', lancamento.quantidade_motorista)}</td>
                     <td>${entrada('valor_excesso', lancamento.valor_excesso)}</td>
                     <td>${quantidade('quantidade_comum', lancamento.quantidade_comum)}</td>
                     <td>${quantidade('quantidade_escolar', lancamento.quantidade_escolar)}</td>
@@ -304,7 +304,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const dadosLancamento = {
                 data_op: document.getElementById('dataOp').value,
                 linha_id: parseInt(linhaId), 
-                valor_garagem: parseFloat(vGaragem),
+                quantidade_motorista: parseInt(vGaragem || 0, 10),
                 valor_excesso: parseFloat(vExcesso),
                 comum: parseFloat(comum),
                 escolar: parseFloat(escolar),
@@ -396,7 +396,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const primeiro = itens[0];
                 const nomeDaLinha = escaparHtml(primeiro.linhas?.nome || 'Linha Excluída');
                 const dataFormatada = new Date(primeiro.data_op + 'T00:00:00').toLocaleDateString('pt-BR');
-                const colspan = operacional ? 5 : 11;
+                const colspan = operacional ? 5 : 12;
                 const botaoDetalhes = `<button class="btn btn-sm btn-outline-secondary" type="button" data-expandir="detalhes-${indice}" aria-expanded="false">${itens.length} viagem(ns)</button>`;
                 const nomeClicavel = `<button class="btn btn-link p-0 text-start" type="button" data-expandir="detalhes-${indice}" aria-expanded="false">${nomeDaLinha}</button>`;
                 let linhaResumo;
@@ -417,6 +417,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else {
                     linhaResumo = `<tr>
                         <td>${dataFormatada}</td><td>${nomeClicavel}</td>
+                        <td>${numero(itens, 'quantidade_motorista')}</td>
                         <td>${moeda(numero(itens, 'valor_garagem'))}</td>
                         <td>${moeda(numero(itens, 'valor_excesso'))}</td><td>${moeda(numero(itens, 'comum'))}</td>
                         <td>${moeda(numero(itens, 'escolar'))}</td>
@@ -435,7 +436,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         return `<tr><td>${escaparHtml(horario)}</td><td>${moeda(item.valor_excesso)}</td><td>${Number(item.km_rodado || 0).toFixed(2)} km</td><td>${botaoEditar}</td></tr>`;
                     }
                     return `<tr>
-                        <td>${escaparHtml(horario)}</td><td>${moeda(item.valor_garagem)}</td>
+                        <td>${escaparHtml(horario)}</td><td>${Number(item.quantidade_motorista || 0)}</td><td>${moeda(item.valor_garagem)}</td>
                         <td>${moeda(item.valor_excesso)}</td><td>${Number(item.quantidade_comum || 0)}</td><td>${moeda(item.comum)}</td>
                         <td>${Number(item.quantidade_escolar || 0)}</td><td>${moeda(item.escolar)}</td>
                         <td>${Number(item.quantidade_vt || 0)}</td><td>${moeda(item.vt)}</td>
@@ -444,7 +445,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }).join('');
                 const cabecalhoDetalhes = operacional
                     ? '<tr><th>Horário</th><th>Excesso</th><th>KM</th><th>Ações</th></tr>'
-                    : '<tr><th>Horário</th><th>Motorista</th><th>Excesso</th><th>Comum qtd.</th><th>Comum R$</th><th>Escolar qtd.</th><th>Escolar R$</th><th>VT qtd.</th><th>VT R$</th><th>KM</th><th>Ações</th></tr>';
+                    : '<tr><th>Horário</th><th>Motorista (qtd.)</th><th>Pagantes (R$)</th><th>Excesso</th><th>Comum qtd.</th><th>Comum R$</th><th>Escolar qtd.</th><th>Escolar R$</th><th>VT qtd.</th><th>VT R$</th><th>KM</th><th>Ações</th></tr>';
                 tbody.insertAdjacentHTML('beforeend', `${linhaResumo}<tr id="detalhes-${indice}" class="table-light" style="display:none"><td colspan="${colspan}"><div class="table-responsive"><table class="table table-sm table-bordered align-middle mb-0"><thead>${cabecalhoDetalhes}</thead><tbody>${detalhes}</tbody></table></div></td></tr>`);
             });
 
@@ -491,7 +492,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('kmRodado').required = true;
                 document.getElementById('btnSalvarLancamento').textContent = 'Atualizar Lançamento';
             }
-            document.getElementById('vGaragem').value = data.valor_garagem;
+            document.getElementById('vGaragem').value = data.quantidade_motorista;
             document.getElementById('vExcesso').value = data.valor_excesso;
             document.getElementById('vComum').value = data.comum || 0;
             document.getElementById('vEscolar').value = data.escolar || 0;
