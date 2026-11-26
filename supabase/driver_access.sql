@@ -28,7 +28,10 @@ RETURNS TABLE (
     local_inicio text,
     local_final text,
     codigo_escala text,
-    em_substituicao boolean
+    em_substituicao boolean,
+    tipo_registro text,
+    local_base text,
+    escala_em_branco boolean
 )
 LANGUAGE plpgsql
 STABLE
@@ -63,7 +66,10 @@ BEGIN
         e.local_inicio,
         e.local_final,
         eo.codigo,
-        coalesce(s.motorista_substituto_id, e.motorista_substituto_id) IS NOT NULL
+        coalesce(e.motorista_substituto_id, s.motorista_substituto_id) IS NOT NULL,
+        'viagem'::text,
+        eo.local_base,
+        e.escala_em_branco
     FROM public.escalas_trabalho e
     LEFT JOIN public.linhas l ON l.id = e.linha_id
     LEFT JOIN public.carros c ON c.id = e.carro_id
@@ -71,10 +77,38 @@ BEGIN
     LEFT JOIN public.substituicoes_escalas s
         ON s.escala_operacional_id = e.escala_operacional_id
        AND s.data_substituicao = e.data_escala
-    WHERE coalesce(s.motorista_substituto_id, e.motorista_substituto_id, e.motorista_id) = v_funcionario_id
+    WHERE NOT e.escala_em_branco
+      AND coalesce(e.motorista_substituto_id, s.motorista_substituto_id, e.motorista_id) = v_funcionario_id
       AND (p_data_inicio IS NULL OR e.data_escala >= p_data_inicio)
       AND (p_data_fim IS NULL OR e.data_escala <= p_data_fim)
-    ORDER BY e.data_escala, e.hora_inicio;
+    UNION ALL
+    SELECT
+        eo.id,
+        dia.data::date,
+        NULL::character varying,
+        NULL::time without time zone,
+        NULL::time without time zone,
+        NULL::text,
+        NULL::text,
+        NULL::text,
+        NULL::text,
+        eo.codigo,
+        false,
+        'folga'::text,
+        eo.local_base,
+        false
+    FROM public.escalas_operacionais eo
+    CROSS JOIN LATERAL generate_series(
+        GREATEST(coalesce(p_data_inicio, CURRENT_DATE), eo.inicio_vigencia)::timestamp,
+        LEAST(
+            coalesce(p_data_fim, CURRENT_DATE + 90),
+            coalesce(eo.fim_vigencia, coalesce(p_data_fim, CURRENT_DATE + 90))
+        )::timestamp,
+        interval '1 day'
+    ) AS dia(data)
+    WHERE eo.motorista_titular_id = v_funcionario_id
+      AND public.escala_operacional_dia_eh_folga(eo.id, dia.data::date)
+    ORDER BY 2, 4 NULLS FIRST;
 END;
 $$;
 

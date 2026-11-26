@@ -45,7 +45,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function renderSchedule(rows) {
-        summary.textContent = `${rows.length} escala(s) no período`;
+        const folgasCount = rows.filter(row => row.tipo_registro === 'folga').length;
+        const viagensCount = rows.length - folgasCount;
+        summary.textContent = `${viagensCount} viagem(ns) · ${folgasCount} folga(s) no período`;
         if (rows.length === 0) {
             list.innerHTML = '<div class="motorista-vazio"><h2 class="h5">Nenhuma escala neste período</h2><p class="text-muted mb-0">Altere as datas para consultar outro período.</p></div>';
             return;
@@ -60,16 +62,26 @@ document.addEventListener('DOMContentLoaded', async () => {
         list.innerHTML = Array.from(groups.entries()).map(([date, shifts]) => `
             <section class="motorista-dia">
                 <h2>${escapeHtml(formatDay(date))}</h2>
-                ${shifts.map(shift => `
-                    <article class="motorista-turno">
+                ${shifts.map(shift => {
+                    if (shift.tipo_registro === 'folga') {
+                        return `<article class="motorista-turno motorista-folga">
+                            <div class="motorista-horario">FOLGA</div>
+                            <div>
+                                <div class="motorista-linha">Escala ${escapeHtml(shift.codigo_escala || '')} · Dia de descanso</div>
+                                <div class="motorista-detalhe">Local-base: ${escapeHtml(shift.local_base || 'não informado')}</div>
+                            </div>
+                        </article>`;
+                    }
+
+                    return `<article class="motorista-turno">
                         <div class="motorista-horario">${escapeHtml(shift.hora_inicio?.slice(0, 5) || '--:--')} – ${escapeHtml(shift.hora_fim?.slice(0, 5) || '--:--')}</div>
                         <div>
                             <div class="motorista-linha">${escapeHtml(shift.codigo_escala ? `Escala ${shift.codigo_escala} · ` : '')}${escapeHtml(shift.linha_nome || 'Linha não informada')}${shift.em_substituicao ? ' · substituição' : ''}</div>
                             <div class="motorista-detalhe">Carro ${escapeHtml(shift.numero_ordem || 'não informado')}${shift.modelo ? ` · ${escapeHtml(shift.modelo)}` : ''}</div>
                             ${(shift.local_inicio || shift.local_final) ? `<div class="motorista-trajeto"><span>Início: ${escapeHtml(shift.local_inicio || '—')}</span><span>Final: ${escapeHtml(shift.local_final || '—')}</span></div>` : ''}
                         </div>
-                    </article>
-                `).join('')}
+                    </article>`;
+                }).join('')}
             </section>
         `).join('');
     }

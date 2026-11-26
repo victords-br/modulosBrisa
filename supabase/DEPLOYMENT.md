@@ -3,16 +3,19 @@
 ## Escalas por código, viagens e folgas
 
 1. Execute `escalas_operacionais.sql` no SQL Editor depois de `role_permissions.sql`. O script cria os cadastros de escala operacional e regra de folga, adiciona o vínculo opcional das viagens existentes, registra substituições e protege o titular e a vigência no banco.
-2. Execute novamente `driver_access.sql` depois da migração para que o motorista substituto também veja as viagens atribuídas a ele.
-3. Na tela TI, configure regras de ciclo usando `T` para trabalho e `F` para folga (por exemplo, `TTTTTF` para 5x1 e `TTTTTTF` para 6x1). O ciclo se repete a partir do início de vigência da escala; é possível cadastrar um padrão de até 56 dias e exceções por data na tela Escala.
-4. Na tela Escala, crie cada código (por exemplo `0022.01`), selecione o motorista titular e a regra. Vincule viagens novas pelo seletor **Escala operacional**. Viagens antigas permanecem preservadas e aparecem como **Sem código** até serem editadas e vinculadas manualmente; não há migração automática porque linha/motorista não determinam com segurança o código da escala.
-5. Em cada cartão de escala, registre o substituto e a data. A substituição vale para todas as viagens daquela escala no dia escolhido; o motorista substituto passa a ver essas viagens em **Minha escala**.
+2. Execute `escalas_substituto_fixo.sql` depois de `escalas_operacionais.sql`. O script adiciona o substituto padrão da escala e aplica a regra de folga às viagens.
+3. Execute `escalas_folgas_automaticas.sql` depois de `escalas_substituto_fixo.sql`. A migração adiciona o local-base, impede vigências sobrepostas para o mesmo titular, valida a disponibilidade do substituto durante todo o dia e cria a consulta que agrupa folgas por data e local.
+4. Execute novamente `driver_access.sql` depois das migrações anteriores. “Minha escala” passa a exibir as viagens atribuídas ao motorista e as folgas previstas para o titular no período consultado.
+5. Na tela TI, configure regras de ciclo usando `T` para trabalho e `F` para folga (por exemplo, `TTTTTF` para 5x1 e `TTTTTTF` para 6x1). O ciclo se repete a partir do início de vigência da escala; é possível cadastrar um padrão de até 56 dias e exceções por data na tela Escala.
+6. Na tela Escala, crie cada código (por exemplo `0022.01`), selecione o titular, o substituto fixo, a regra e o local-base das folgas. Um motorista titular não pode estar em códigos com vigências sobrepostas; períodos sem sobreposição são permitidos. Se o substituto estiver alocado em outra escala no mesmo dia, a cobertura fica **Escala em branco**. O painel da data reúne automaticamente os titulares de folga por local-base; isso é um aviso de folga/cobertura, não cria uma viagem com linha, carro e horário.
+7. Vincule viagens pelo seletor **Escala operacional**. Em uma folga, a viagem usa o substituto disponível; se não houver cobertura, fica marcada como **Escala em branco**. Uma substituição por data pode preencher a vaga com outro motorista disponível. Viagens antigas permanecem preservadas e aparecem como **Sem código** até serem editadas e vinculadas manualmente.
+8. O painel de folgas aparece na tela Escala quando uma data é selecionada e também na impressão/PDF. “Minha escala” exibe cada folga do titular com a data, o código e o local-base. Viagens em branco não são atribuídas a nenhum motorista.
 
 Um padrão 6x1 que simplesmente se repete a cada sete dias mantém a folga no mesmo dia da semana. A alternância entre sábados e domingos precisa de um ciclo personalizado, com todas as folgas e dias trabalhados definidos no período; revise o padrão com a operação antes de aplicá-lo. A configuração não substitui a validação das regras trabalhistas aplicáveis.
 
 ## Acesso do motorista à própria escala
 
-1. Execute `driver_access.sql` no SQL Editor depois de `role_permissions.sql`. O script cria o setor `Motorista`, adiciona o vínculo de funcionário ao perfil e a RPC restrita `minhas_escalas_motorista`.
+1. Execute `driver_access.sql` no SQL Editor depois de `escalas_folgas_automaticas.sql`. O script cria o setor `Motorista`, adiciona o vínculo de funcionário ao perfil e atualiza a RPC restrita `minhas_escalas_motorista` para retornar viagens atribuídas e folgas do titular.
 2. Publique a versão atualizada da função de administração, usada pela tela TI para associar a conta a um funcionário:
 
 ```bash

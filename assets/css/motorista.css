@@ -80,6 +80,18 @@ body.motorista-page {
     background: #fff;
 }
 
+.motorista-turno.motorista-folga {
+    border-left-color: #3c8175;
+    background: #f8fbfa;
+}
+
+.motorista-folga .motorista-horario {
+    align-self: center;
+    color: #236344;
+    font-size: 0.9rem;
+    letter-spacing: 0.06em;
+}
+
 .motorista-horario {
     color: #173b3c;
     font-size: 1.05rem;

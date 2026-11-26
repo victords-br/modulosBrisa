@@ -351,6 +351,125 @@ body.tela-dashboard {
   font-weight: 700;
 }
 
+.folgas-dia-painel {
+  margin-bottom: 1.25rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid #dbe7e3;
+  border-left: 4px solid #3c8175;
+  border-radius: 10px;
+  background: #f8fbfa;
+}
+
+.folgas-dia-painel > header {
+  margin-bottom: 0.8rem;
+}
+
+.folgas-dia-painel h3 {
+  margin: 0;
+  color: #193b38;
+  font-size: 1rem;
+  font-weight: 750;
+}
+
+.folgas-dia-painel p {
+  margin: 0.25rem 0 0;
+  color: #71807d;
+  font-size: 0.82rem;
+}
+
+.folgas-dia-painel > div > p {
+  margin-top: 0.35rem;
+}
+
+.folgas-dia-locais {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+  gap: 0.75rem;
+}
+
+.folgas-dia-local {
+  min-width: 0;
+  padding: 0.8rem;
+  border: 1px solid #e2eae7;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.folgas-dia-local h4 {
+  margin: 0 0 0.55rem;
+  color: #355a54;
+  font-size: 0.86rem;
+  font-weight: 750;
+}
+
+.folgas-dia-local ul {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.folgas-dia-local li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid #edf1ef;
+}
+
+.folgas-dia-local li > div {
+  display: grid;
+  min-width: 0;
+  gap: 0.12rem;
+}
+
+.folgas-dia-local li strong {
+  color: #233a36;
+  font-size: 0.8rem;
+}
+
+.folgas-dia-local li > div > span {
+  color: #71807d;
+  font-size: 0.75rem;
+}
+
+.folga-status-ok,
+.folga-status-vazia {
+  flex: 0 0 auto;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 750;
+  text-align: center;
+}
+
+.folga-status-ok {
+  border: 1px solid #b8ddcd;
+  background: #edf8f2;
+  color: #236344;
+}
+
+.folga-status-vazia {
+  border: 1px solid #f0c8c8;
+  background: #fff1f1;
+  color: #b42323;
+}
+
+.folgas-dia-sem-registros {
+  padding: 0.8rem;
+  border: 1px dashed #d5e1dd;
+  border-radius: 8px;
+  background: #fff;
+  text-align: center;
+}
+
+.folgas-dia-erro {
+  border-left-color: #c83b3b;
+  background: #fff8f8;
+}
+
 .escala-turnos {
   display: grid;
   gap: 0.55rem;
@@ -358,17 +477,23 @@ body.tela-dashboard {
 
 .escala-turno {
   display: grid;
-  grid-template-columns: minmax(100px, 0.8fr) minmax(125px, 0.9fr) minmax(115px, 1fr) minmax(120px, 0.9fr) minmax(170px, 1.4fr) auto;
-  align-items: center;
-  gap: 1rem;
+  gap: 0.85rem;
   min-width: 0;
-  padding: 0.9rem 1rem;
+  padding: 1rem 1.1rem;
   border: 1px solid #dfe7e4;
   border-left: 4px solid #3c8175;
-  border-radius: 6px;
+  border-radius: 10px;
   background: #fff;
   box-shadow: 0 2px 8px rgba(27, 57, 52, 0.04);
   transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.escala-turno-dados {
+  display: grid;
+  grid-template-columns: minmax(90px, 0.8fr) minmax(130px, 0.9fr) minmax(150px, 1.1fr) minmax(115px, 0.9fr) minmax(170px, 1.4fr);
+  align-items: start;
+  gap: 0.75rem 1rem;
+  min-width: 0;
 }
 
 .escala-turno:hover {
@@ -423,9 +548,58 @@ body.tela-dashboard {
   color: #a0afaa;
 }
 
+.escala-turno-rodape {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+  padding-top: 0.7rem;
+  border-top: 1px solid #edf1ef;
+}
+
+.escala-substituto {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.55rem;
+  min-width: 0;
+  padding: 0.4rem 0.7rem;
+  border: 1px solid #f0dfad;
+  border-radius: 8px;
+  background: #fff9e9;
+}
+
+.escala-substituto > span {
+  color: #80651d;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.escala-substituto > strong {
+  overflow-wrap: anywhere;
+  color: #5b4a1d;
+  font-size: 0.8rem;
+  font-weight: 650;
+}
+
+.escala-vaga-alerta {
+  padding: 0.4rem 0.7rem;
+  border: 1px solid #f0c8c8;
+  border-radius: 8px;
+  background: #fff1f1;
+  color: #b42323;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
 .escala-acoes {
   display: flex;
   gap: 0.35rem;
+  margin-left: auto;
+}
+
+.escala-acoes .btn {
+  white-space: nowrap;
 }
 
 .escala-vazia {
@@ -438,51 +612,46 @@ body.tela-dashboard {
 }
 
 @media (max-width: 1199.98px) {
-  .escala-turno {
-    grid-template-columns: minmax(95px, 0.8fr) minmax(115px, 0.9fr) minmax(110px, 1fr) minmax(110px, 0.9fr) minmax(150px, 1.4fr) auto;
-    gap: 0.7rem;
-    padding: 0.85rem;
+  .escala-turno-dados {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .escala-turno-trajeto {
+    grid-column: span 2;
   }
 }
 
 @media (max-width: 991.98px) {
-  .escala-turno {
-    grid-template-columns: minmax(95px, 0.8fr) minmax(125px, 0.9fr) minmax(120px, 1fr) minmax(120px, 1fr) auto;
-  }
-
-  .escala-turno-trajeto {
-    grid-column: 1 / 5;
-  }
-
-  .escala-acoes {
-    grid-column: 5;
-    grid-row: 2;
+  .escala-turno-dados {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 767.98px) {
-  .escala-turno {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 0.75rem 1rem;
+  .folgas-dia-local li {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
-  .escala-turno-data,
-  .escala-turno-horario {
-    grid-column: auto;
-    grid-row: 1;
+  .folga-status-ok,
+  .folga-status-vazia {
+    white-space: normal;
+  }
+
+  .escala-turno-dados {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .escala-turno-trajeto {
+    grid-column: 1 / -1;
   }
 
   .escala-turno-horario {
     justify-content: flex-end;
   }
 
-  .escala-turno-trajeto {
-    grid-column: 1 / -1;
-  }
-
-  .escala-acoes {
-    grid-column: 1 / -1;
-    grid-row: auto;
+  .escala-turno-rodape {
+    align-items: flex-start;
   }
 }
 
@@ -496,22 +665,29 @@ body.tela-dashboard {
     width: 2.4rem;
   }
 
-  .escala-turno {
+  .escala-turno-dados {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .escala-turno-data,
-  .escala-turno-horario,
-  .escala-turno-linha,
-  .escala-turno-carro,
-  .escala-turno-trajeto,
-  .escala-acoes {
+  .escala-turno-trajeto {
     grid-column: 1;
-    grid-row: auto;
   }
 
   .escala-turno-horario {
     justify-content: flex-start;
+  }
+
+  .escala-turno-rodape {
+    flex-direction: column;
+  }
+
+  .escala-substituto,
+  .escala-acoes {
+    width: 100%;
+  }
+
+  .escala-acoes .btn {
+    flex: 1;
   }
 }
 
@@ -588,4 +764,3 @@ body.tela-home {
   border-color: transparent;
   font-weight: bold;
 }
-

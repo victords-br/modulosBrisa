@@ -31,6 +31,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     let escalasOperacionaisCarregadas = [];
     let regrasFolgaCarregadas = [];
     let folgasCarregadas = [];
+    let folgasDiaCarregadas = [];
+    let erroFolgasDia = null;
     let substituicoesCarregadas = [];
 
     if (listaEscalas) {
@@ -63,11 +65,22 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
             const isSubstituicao = Boolean(formSubstituicao);
+            const substitutoInformado = form.querySelector('select').value;
+            if (isSubstituicao && escalaEstaEmFolga(escalaId, dateInput.value)) {
+                if (!escala.motorista_substituto_fixo_id) {
+                    alert('Configure o substituto fixo da escala antes de registrar uma substituição em dia de folga.');
+                    return;
+                }
+                if (substitutoInformado !== escala.motorista_substituto_fixo_id) {
+                    alert('Em dia de folga, deve ser usado o substituto fixo configurado para a escala.');
+                    return;
+                }
+            }
             const valores = isSubstituicao
                 ? {
                     escala_operacional_id: escalaId,
                     data_substituicao: dateInput.value,
-                    motorista_substituto_id: form.querySelector('select').value,
+                    motorista_substituto_id: substitutoInformado,
                     user_id: usuarioLogado.id
                 }
                 : {
@@ -91,6 +104,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function resetarFormularioEscalaOperacional() {
         formEscalaOperacional.reset();
+        document.querySelectorAll('#motoristaSubstitutoFixoEscala option').forEach(option => {
+            option.disabled = false;
+        });
         document.getElementById('escalaOperacionalIdEdicao').value = '';
         document.getElementById('tituloModalEscalaOperacional').textContent = 'Nova escala operacional';
         formEscalaOperacional.querySelector('button[type="submit"]').textContent = 'Salvar escala';
@@ -106,9 +122,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('escalaOperacionalIdEdicao').value = escala.id;
         document.getElementById('codigoEscalaOperacional').value = escala.codigo;
         document.getElementById('motoristaTitularEscala').value = escala.motorista_titular_id;
+        document.getElementById('motoristaSubstitutoFixoEscala').value = escala.motorista_substituto_fixo_id || '';
+        document.getElementById('motoristaTitularEscala').dispatchEvent(new Event('change'));
         document.getElementById('regraFolgaEscala').value = escala.regra_folga_id || '';
         document.getElementById('inicioVigenciaEscala').value = escala.inicio_vigencia;
         document.getElementById('fimVigenciaEscala').value = escala.fim_vigencia || '';
+        document.getElementById('localBaseEscala').value = escala.local_base || '';
         document.getElementById('observacaoEscala').value = escala.observacao || '';
         document.getElementById('tituloModalEscalaOperacional').textContent = `Editar escala ${escala.codigo}`;
         formEscalaOperacional.querySelector('button[type="submit"]').textContent = 'Atualizar escala';
@@ -134,9 +153,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             const payload = {
                 codigo,
                 motorista_titular_id: document.getElementById('motoristaTitularEscala').value,
+                motorista_substituto_fixo_id: document.getElementById('motoristaSubstitutoFixoEscala').value || null,
                 regra_folga_id: document.getElementById('regraFolgaEscala').value || null,
                 inicio_vigencia: inicio,
                 fim_vigencia: fim,
+                local_base: document.getElementById('localBaseEscala').value.trim() || null,
                 observacao: document.getElementById('observacaoEscala').value.trim() || null
             };
             const submit = formEscalaOperacional.querySelector('button[type="submit"]');
@@ -172,7 +193,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     async function excluirSubstituicao(id) {
         if (!['Administração', 'Operacional', 'TI'].includes(setorUsuario)) return;
-        if (!window.confirm('Remover esta substituição? As viagens dessa data voltarão ao motorista titular.')) return;
+        if (!window.confirm('Remover esta substituição? Nas folgas, a cobertura voltará ao substituto fixo ou ficará em branco se ele estiver indisponível.')) return;
         const { error } = await window.supabaseClient.from('substituicoes_escalas').delete().eq('id', id);
         if (error) {
             alert(`Não foi possível remover a substituição: ${error.message}`);
@@ -274,6 +295,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             `<option value="${motorista.id}">${escaparHtml(motorista.nome)} (${escaparHtml(motorista.matricula)})</option>`
         ).join('');
         if (selectTitular) selectTitular.innerHTML = '<option value="">Selecione o motorista...</option>' + opcoesMotoristas;
+
+        const selectSubstitutoFixo = document.getElementById('motoristaSubstitutoFixoEscala');
+        if (selectSubstitutoFixo) {
+            selectSubstitutoFixo.innerHTML = '<option value="">Selecione o substituto...</option>' + opcoesMotoristas;
+            selectTitular?.addEventListener('change', () => {
+                const titularId = selectTitular.value;
+                [...selectSubstitutoFixo.options].forEach(option => {
+                    option.disabled = Boolean(titularId && option.value === titularId);
+                    if (option.value === titularId && option.selected) selectSubstitutoFixo.value = '';
+                });
+            });
+        }
     }
 
     async function carregarRegrasFolga() {
@@ -295,12 +328,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     async function carregarEscalasOperacionais() {
         const { data, error } = await window.supabaseClient
             .from('escalas_operacionais')
-            .select('id, codigo, motorista_titular_id, regra_folga_id, inicio_vigencia, fim_vigencia, observacao')
+            .select('id, codigo, motorista_titular_id, motorista_substituto_fixo_id, regra_folga_id, inicio_vigencia, fim_vigencia, local_base, observacao')
             .order('codigo');
         if (error) {
             console.error('Erro ao carregar escalas operacionais:', error);
             if (listaEscalas) {
-                listaEscalas.innerHTML = `<div class="alert alert-danger">Não foi possível carregar as escalas por código. Confira se a migração escalas_operacionais.sql foi aplicada: ${escaparHtml(error.message)}</div>`;
+                listaEscalas.innerHTML = `<div class="alert alert-danger">Não foi possível carregar as escalas por código. Confira se as migrações escalas_operacionais.sql, escalas_substituto_fixo.sql e escalas_folgas_automaticas.sql foram aplicadas: ${escaparHtml(error.message)}</div>`;
             }
             return;
         }
@@ -317,6 +350,45 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!dataIso) return '-';
         const data = new Date(dataIso + 'T00:00:00');
         return isNaN(data.getTime()) ? dataIso : data.toLocaleDateString('pt-BR');
+    }
+
+    function escalaEstaEmFolga(escalaId, dataIso) {
+        const escala = escalasOperacionaisCarregadas.find(item => item.id === escalaId);
+        if (!escala || !dataIso || dataIso < escala.inicio_vigencia || (escala.fim_vigencia && dataIso > escala.fim_vigencia)) {
+            return false;
+        }
+
+        const excecao = folgasCarregadas.find(item =>
+            item.escala_operacional_id === escalaId && item.data_folga === dataIso
+        );
+        if (excecao) return excecao.tipo === 'folga';
+
+        const regra = regrasFolgaCarregadas.find(item => item.id === escala.regra_folga_id);
+        if (!regra?.padrao_ciclo) return false;
+
+        const inicio = Date.parse(`${escala.inicio_vigencia}T00:00:00Z`);
+        const data = Date.parse(`${dataIso}T00:00:00Z`);
+        const diasDesdeInicio = Math.floor((data - inicio) / 86400000);
+        return regra.padrao_ciclo[diasDesdeInicio % regra.padrao_ciclo.length] === 'F';
+    }
+
+    function atualizarAvisoFolga() {
+        const aviso = document.getElementById('avisoFolgaEscala');
+        if (!aviso) return;
+        const escalaId = document.getElementById('escalaOperacionalId')?.value;
+        const data = document.getElementById('escalaData')?.value;
+        const escala = escalasOperacionaisCarregadas.find(item => item.id === escalaId);
+        if (!escalaId || !data || !escalaEstaEmFolga(escalaId, data)) {
+            aviso.textContent = '';
+            aviso.className = 'form-text';
+            return;
+        }
+
+        const substituto = motoristasCarregados.find(item => item.id === escala.motorista_substituto_fixo_id);
+        aviso.textContent = substituto
+            ? `Folga prevista. ${substituto.nome} cobrirá se estiver livre; se estiver em outra escala no dia, a viagem ficará como "Escala em branco".`
+            : 'Folga prevista sem substituto fixo. A cobertura ficará como "Escala em branco" até ser definida.';
+        aviso.className = substituto ? 'form-text text-warning-emphasis' : 'form-text text-danger';
     }
 
     function formatarHora(hora) {
@@ -377,7 +449,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
-        if (escalasCarregadas.length === 0) {
+        if (escalasCarregadas.length === 0 && folgasDiaCarregadas.length === 0) {
             alert('Não há escalas para a data selecionada.');
             return;
         }
@@ -388,7 +460,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
-        const motoristas = new Set(escalasCarregadas.map(item => item.motorista_substituto?.id || item.motorista_id || item.funcionarios?.nome));
+        const motoristas = new Set(escalasCarregadas
+            .filter(item => !item.escala_em_branco)
+            .map(item => item.motorista_substituto?.id || item.motorista_id || item.funcionarios?.nome));
         const escalasOrdenadas = [...escalasCarregadas].sort((a, b) => {
             const motoristaA = a.funcionarios?.nome || 'Motorista removido';
             const motoristaB = b.funcionarios?.nome || 'Motorista removido';
@@ -401,20 +475,36 @@ document.addEventListener('DOMContentLoaded', async () => {
         const dadosImpressao = {
             data: formatarData(dataSelecionada),
             linha: nomeLinha,
-            turnos: escalasCarregadas.length,
+            turnos: escalasCarregadas.filter(item => !item.escala_em_branco).length,
             motoristas: motoristas.size,
+            folgas: folgasDiaCarregadas.length,
             geradoEm: new Date().toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }),
             escalas: escalasOrdenadas.map(item => ({
                 horario: `${formatarHora(item.hora_inicio)} - ${formatarHora(item.hora_fim)}${terminaNoDiaSeguinte(item.hora_inicio, item.hora_fim) ? ' (+1 dia)' : ''}`,
-                motorista: item.motorista_substituto
+                motorista: item.escala_em_branco
+                    ? 'Escala em branco'
+                    : item.motorista_substituto
                     ? `${item.funcionarios?.nome || 'Titular'} / ${item.motorista_substituto.nome} (substituto)`
                     : item.funcionarios?.nome || 'Motorista removido',
-                matricula: item.funcionarios?.matricula || '-',
+                matricula: item.escala_em_branco ? '-' : item.funcionarios?.matricula || '-',
                 codigoEscala: escalasOperacionaisCarregadas.find(escala => escala.id === item.escala_operacional_id)?.codigo || 'Sem código',
                 linha: item.linhas?.nome || 'Linha removida',
                 carro: `${item.carros?.numero_ordem || 'Carro removido'}${item.carros?.modelo ? ` · ${item.carros.modelo}` : ''}`,
                 trajeto: `${item.local_inicio || 'Não informado'} - ${item.local_final || 'Não informado'}`
-            }))
+            })),
+            folgas: [...folgasDiaCarregadas]
+                .sort((a, b) => (a.local_base || '').localeCompare(b.local_base || '', 'pt-BR')
+                    || a.motorista_nome.localeCompare(b.motorista_nome, 'pt-BR'))
+                .map(item => ({
+                    local: item.local_base || 'Local não informado',
+                    codigo: item.codigo,
+                    motorista: item.motorista_nome,
+                    matricula: item.matricula || '-',
+                    substituto: item.substituto_disponivel ? item.substituto_nome : '',
+                    situacao: item.substituto_disponivel
+                        ? 'Substituto disponível'
+                        : 'Escala em branco'
+                }))
         };
 
         const mensagemImpressao = { tipo: 'ESCALA_PARA_IMPRESSAO', dados: dadosImpressao };
@@ -514,7 +604,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             item.funcionarios = motoristaPorId.get(item.motorista_id) || null;
             const substituicao = substituicaoPorEscalaData.get(`${item.escala_operacional_id}:${item.data_escala}`);
             item.motorista_substituto = motoristaPorId.get(
-                substituicao?.motorista_substituto_id || item.motorista_substituto_id
+                item.motorista_substituto_id || substituicao?.motorista_substituto_id
             ) || null;
         });
 
@@ -528,17 +618,32 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!listaEscalas) return;
 
         folgasCarregadas = [];
-        if (idsEscalasVisiveis.length) {
+        const idsTodasEscalas = escalasOperacionaisCarregadas.map(escala => escala.id);
+        if (idsTodasEscalas.length) {
             const resultadoFolgas = await window.supabaseClient
                 .from('folgas_escalas')
                 .select('id, escala_operacional_id, data_folga, tipo, observacao')
-                .in('escala_operacional_id', idsEscalasVisiveis);
+                .in('escala_operacional_id', idsTodasEscalas);
             if (resultadoFolgas.error) {
                 console.error('Erro ao carregar exceções de folga:', resultadoFolgas.error);
                 listaEscalas.innerHTML = `<div class="alert alert-danger">Não foi possível carregar as exceções de folga: ${escaparHtml(resultadoFolgas.error.message)}</div>`;
                 return;
             }
             folgasCarregadas = resultadoFolgas.data || [];
+        }
+
+        folgasDiaCarregadas = [];
+        erroFolgasDia = null;
+        if (filtroData?.value) {
+            const resultadoFolgasDia = await window.supabaseClient.rpc('listar_folgas_operacionais', {
+                p_data: filtroData.value
+            });
+            if (resultadoFolgasDia.error) {
+                console.error('Erro ao carregar folgas automáticas:', resultadoFolgasDia.error);
+                erroFolgasDia = resultadoFolgasDia.error.message;
+            } else {
+                folgasDiaCarregadas = resultadoFolgasDia.data || [];
+            }
         }
 
         const podeAlterar = ['Administração', 'Operacional', 'TI'].includes(setorUsuario);
@@ -576,25 +681,72 @@ document.addEventListener('DOMContentLoaded', async () => {
             const carroNome = item.carros?.numero_ordem || 'Carro removido';
             const modeloCarro = item.carros?.modelo;
             const substituto = item.motorista_substituto?.nome;
+            const escalaEmBranco = Boolean(item.escala_em_branco);
             const botoesAcao = podeAlterar ? `
                 <div class="escala-acoes">
-                    <button class="btn btn-sm btn-outline-primary" type="button" data-acao-escala="editar" data-id="${escaparHtml(item.id)}" aria-label="Editar viagem de ${escaparHtml(nomeGrupo)}">Editar viagem</button>
-                    <button class="btn btn-sm btn-outline-danger" type="button" data-acao-escala="excluir" data-id="${escaparHtml(item.id)}" aria-label="Excluir viagem de ${escaparHtml(nomeGrupo)}">Excluir viagem</button>
+                    <button class="btn btn-sm btn-outline-primary" type="button" data-acao-escala="editar" data-id="${escaparHtml(item.id)}" aria-label="Editar viagem de ${escaparHtml(nomeGrupo)}">Editar</button>
+                    <button class="btn btn-sm btn-outline-danger" type="button" data-acao-escala="excluir" data-id="${escaparHtml(item.id)}" aria-label="Excluir viagem de ${escaparHtml(nomeGrupo)}">Excluir</button>
                 </div>
             ` : '';
 
             return `<article class="escala-turno">
-                <div class="escala-turno-data"><span>DATA</span><strong>${escaparHtml(formatarData(item.data_escala))}</strong></div>
-                <div class="escala-turno-horario" aria-label="Das ${escaparHtml(formatarHora(item.hora_inicio))} às ${escaparHtml(formatarHora(item.hora_fim))}${terminaNoDiaSeguinte(item.hora_inicio, item.hora_fim) ? ' do dia seguinte' : ''}">
-                    <strong>${escaparHtml(formatarHora(item.hora_inicio))}</strong><span aria-hidden="true">-</span>
-                    <strong>${escaparHtml(formatarHora(item.hora_fim))}${terminaNoDiaSeguinte(item.hora_inicio, item.hora_fim) ? ' (+1 dia)' : ''}</strong>
+                <div class="escala-turno-dados">
+                    <div class="escala-turno-data"><span>DATA</span><strong>${escaparHtml(formatarData(item.data_escala))}</strong></div>
+                    <div class="escala-turno-horario" aria-label="Das ${escaparHtml(formatarHora(item.hora_inicio))} às ${escaparHtml(formatarHora(item.hora_fim))}${terminaNoDiaSeguinte(item.hora_inicio, item.hora_fim) ? ' do dia seguinte' : ''}">
+                        <strong>${escaparHtml(formatarHora(item.hora_inicio))}</strong><span aria-hidden="true">-</span>
+                        <strong>${escaparHtml(formatarHora(item.hora_fim))}${terminaNoDiaSeguinte(item.hora_inicio, item.hora_fim) ? ' (+1 dia)' : ''}</strong>
+                    </div>
+                    <div class="escala-turno-linha"><span>LINHA</span><strong>${escaparHtml(linhaNome)}</strong></div>
+                    <div class="escala-turno-carro"><span>CARRO</span><strong>${escaparHtml(carroNome)}${modeloCarro ? ` · ${escaparHtml(modeloCarro)}` : ''}</strong></div>
+                    <div class="escala-turno-trajeto"><span>TRAJETO</span><strong>${escaparHtml(item.local_inicio || 'Não informado')} <span aria-hidden="true">→</span> ${escaparHtml(item.local_final || 'Não informado')}</strong></div>
                 </div>
-                <div class="escala-turno-linha"><span>LINHA</span><strong>${escaparHtml(linhaNome)}</strong></div>
-                <div class="escala-turno-carro"><span>CARRO</span><strong>${escaparHtml(carroNome)}${modeloCarro ? ` · ${escaparHtml(modeloCarro)}` : ''}</strong></div>
-                <div class="escala-turno-trajeto"><span>TRAJETO</span><strong>${escaparHtml(item.local_inicio || 'Não informado')} <span aria-hidden="true">→</span> ${escaparHtml(item.local_final || 'Não informado')}</strong></div>
-                ${substituto ? `<div class="small text-warning-emphasis">Substituto do dia: ${escaparHtml(substituto)}</div>` : ''}
-                ${botoesAcao}
+                ${(substituto || escalaEmBranco || botoesAcao) ? `<div class="escala-turno-rodape">
+                    ${substituto ? `<div class="escala-substituto"><span>Substituto do dia</span><strong>${escaparHtml(substituto)}</strong></div>` : ''}
+                    ${escalaEmBranco ? '<div class="escala-vaga-alerta" role="status">Escala em branco</div>' : ''}
+                    ${botoesAcao}
+                </div>` : ''}
             </article>`;
+        }
+
+        function renderizarPainelFolgas() {
+            if (!filtroData?.value) {
+                return `<section class="folgas-dia-painel">
+                    <div><h3>Folgas do dia</h3><p>Selecione uma data para reunir os motoristas de folga por local-base.</p></div>
+                </section>`;
+            }
+
+            if (erroFolgasDia) {
+                return `<section class="folgas-dia-painel folgas-dia-erro">
+                    <div><h3>Folgas do dia · ${escaparHtml(formatarData(filtroData.value))}</h3>
+                    <p>Não foi possível carregar a lista automática. Confira se <code>escalas_folgas_automaticas.sql</code> foi aplicada.</p></div>
+                </section>`;
+            }
+
+            const locais = new Map();
+            folgasDiaCarregadas.forEach(item => {
+                const local = item.local_base?.trim() || 'Local não informado';
+                if (!locais.has(local)) locais.set(local, []);
+                locais.get(local).push(item);
+            });
+
+            const conteudo = locais.size
+                ? [...locais.entries()].map(([local, itens]) => `
+                    <article class="folgas-dia-local">
+                        <h4>${escaparHtml(local)}</h4>
+                        <ul>${itens.map(item => {
+                            const status = item.substituto_disponivel
+                                ? `<span class="folga-status-ok">Substituto disponível · ${escaparHtml(item.substituto_nome)}</span>`
+                                : '<span class="folga-status-vazia">Escala em branco</span>';
+                            return `<li><div><strong>${escaparHtml(item.codigo)}</strong><span>${escaparHtml(item.motorista_nome)} · Matrícula ${escaparHtml(item.matricula || '-')}</span></div>${status}</li>`;
+                        }).join('')}</ul>
+                    </article>`).join('')
+                : '<p class="folgas-dia-sem-registros">Nenhum motorista está de folga nesta data.</p>';
+
+            return `<section class="folgas-dia-painel">
+                <header><div><h3>Folgas do dia · ${escaparHtml(formatarData(filtroData.value))}</h3>
+                <p>${folgasDiaCarregadas.length} motorista(s) agrupado(s) por local-base</p></div></header>
+                <div class="folgas-dia-locais">${conteudo}</div>
+            </section>`;
         }
 
         const viagensPorEscala = new Map();
@@ -644,6 +796,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <div class="escala-motorista-identidade"><span class="escala-avatar" aria-hidden="true">${escaparHtml(iniciaisDoNome(escala.codigo))}</span><div>
                         <h3>${escaparHtml(escala.codigo)}</h3>
                         <span>Titular: ${escaparHtml(titular?.nome || 'Motorista não encontrado')} · Matrícula ${escaparHtml(titular?.matricula || '-')}</span>
+                        ${escala.motorista_substituto_fixo_id ? `<div class="small text-muted">Substituto fixo nas folgas: ${escaparHtml(motoristaPorId.get(escala.motorista_substituto_fixo_id)?.nome || 'Motorista não encontrado')}</div>` : ''}
+                        ${escala.local_base ? `<div class="small text-muted">Local-base: ${escaparHtml(escala.local_base)}</div>` : ''}
                     </div></div>
                     <div class="d-flex align-items-center gap-2"><span class="escala-contagem">${viagens.length} ${viagens.length === 1 ? 'viagem' : 'viagens'}</span>
                         ${podeAlterar ? `<button class="btn btn-sm btn-outline-primary" type="button" data-acao-escala="editar-operacional" data-id="${escaparHtml(escala.id)}">Editar escala</button>` : ''}
@@ -670,8 +824,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <div class="escala-turnos">${grupo.viagens.map(item => renderizarViagem(item, grupo.nome)).join('')}</div>
             </section>`).join('');
 
-        listaEscalas.innerHTML = [...gruposDeEscala, listaLegados].filter(Boolean).join('')
+        const gruposHtml = [...gruposDeEscala, listaLegados].filter(Boolean).join('')
             || '<div class="escala-vazia">Nenhuma escala ou viagem encontrada para esses filtros.</div>';
+        listaEscalas.innerHTML = renderizarPainelFolgas() + gruposHtml;
     }
 
     function resetarFormulario() {
@@ -703,7 +858,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             const escala = escalasOperacionaisCarregadas.find(item => item.id === selectEscalaOperacional.value);
             if (escala) selectMotorista.value = escala.motorista_titular_id;
             selectMotorista.disabled = Boolean(escala);
+            atualizarAvisoFolga();
         });
+        document.getElementById('escalaData').addEventListener('change', atualizarAvisoFolga);
 
         formEscala.addEventListener('submit', async (event) => {
             event.preventDefault();

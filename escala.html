@@ -86,9 +86,10 @@
                             <div class="col-md-4"><label class="fw-bold form-label" for="escalaFim">Hora Fim (24h)</label><input class="form-control" id="escalaFim" type="text" inputmode="numeric" placeholder="00:00" maxlength="5" autocomplete="off" required></div>
                         </div>
                         <div class="row mb-3">
-                                <div class="col-12"><label class="fw-bold form-label" for="escalaOperacionalId">Escala operacional (opcional)</label><select class="form-select" id="escalaOperacionalId">
+                            <div class="col-12"><label class="fw-bold form-label" for="escalaOperacionalId">Escala operacional (opcional)</label><select class="form-select" id="escalaOperacionalId">
                                         <option value="">Sem escala vinculada (registro antigo)</option>
                                     </select></div>
+                            <div class="col-12"><div class="form-text" id="avisoFolgaEscala" aria-live="polite"></div></div>
                         </div>
                         <div class="row mb-3">
                             <div class="col-md-6"><label class="fw-bold form-label">Local Início (Trajeto)</label><input class="form-control" type="text" id="escalaLocalInicio" placeholder="Ex: GARAGEM"></div>
@@ -110,14 +111,16 @@
                         <button class="btn-close btn-close-white" type="button" data-bs-dismiss="modal" aria-label="Fechar"></button>
                     </div>
                     <div class="modal-body">
-                        <p class="small text-muted">A escala identifica o motorista titular e reúne viagens de qualquer linha. O código segue o formato 0022.01 ou 0022.01A.</p>
+                        <p class="small text-muted">A escala identifica o motorista titular e reúne viagens de qualquer linha. O mesmo titular não pode ter códigos com vigências sobrepostas. O código segue o formato 0022.01 ou 0022.01A.</p>
                         <div class="row g-3">
                             <div class="col-md-4"><label class="form-label fw-semibold" for="codigoEscalaOperacional">Código</label><input class="form-control" id="codigoEscalaOperacional" type="text" maxlength="10" placeholder="0022.01" pattern="[0-9]{4}\.[0-9]{2}[A-Z]?" required></div>
                             <div class="col-md-8"><label class="form-label fw-semibold" for="motoristaTitularEscala">Motorista titular</label><select class="form-select" id="motoristaTitularEscala" required><option value="">Selecione o motorista...</option></select></div>
+                            <div class="col-md-6"><label class="form-label fw-semibold" for="motoristaSubstitutoFixoEscala">Substituto fixo nos dias de folga</label><select class="form-select" id="motoristaSubstitutoFixoEscala"><option value="">Selecione o substituto...</option></select><div class="form-text">Nas folgas, a cobertura usa este motorista se ele não estiver em outra escala no dia.</div></div>
                             <div class="col-md-6"><label class="form-label fw-semibold" for="regraFolgaEscala">Regra de folga</label><select class="form-select" id="regraFolgaEscala"><option value="">Sem regra automática</option></select></div>
                             <div class="col-md-3"><label class="form-label fw-semibold" for="inicioVigenciaEscala">Início da vigência</label><input class="form-control" id="inicioVigenciaEscala" type="date" required></div>
                             <div class="col-md-3"><label class="form-label fw-semibold" for="fimVigenciaEscala">Fim da vigência</label><input class="form-control" id="fimVigenciaEscala" type="date"></div>
-                            <div class="col-12"><label class="form-label fw-semibold" for="observacaoEscala">Observação</label><textarea class="form-control" id="observacaoEscala" rows="2"></textarea></div>
+                            <div class="col-md-6"><label class="form-label fw-semibold" for="localBaseEscala">Local-base das folgas</label><input class="form-control" id="localBaseEscala" type="text" maxlength="120" placeholder="Ex.: Garagem Central"><div class="form-text">As folgas do dia serão agrupadas por este local.</div></div>
+                            <div class="col-md-6"><label class="form-label fw-semibold" for="observacaoEscala">Observação</label><textarea class="form-control" id="observacaoEscala" rows="2"></textarea></div>
                         </div>
                     </div>
                     <div class="modal-footer"><button class="btn btn-secondary" type="button" data-bs-dismiss="modal">Cancelar</button><button class="btn btn-primary-custom" type="submit">Salvar escala</button></div>
