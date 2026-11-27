@@ -7,10 +7,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // Variáveis do sistema
     let usuarioLogado = null;
     let setorUsuario = '';
-    let idLancamentoEdicao = null;
+let idLancamentoEdicao = null;
     let trechosLancamento = [];
     let sequenciaCarregamentoViagens = 0;
-    let tarifasLancamento = null;
+    let tarifaLancamentoVt = null;
+    let modoEdicaoEscalaAntiga = false;
+    let lancamentosCarregados = [];
 
     const NOMES_TIPO_DIA = { 1: 'Úteis', 2: 'Sábado', 3: 'Domingo' };
     const TIPOS_DIA_POR_DIA_SEMANA = { 0: 3, 6: 2 };
@@ -111,6 +113,47 @@ document.addEventListener('DOMContentLoaded', () => {
             .map(campo => [campo.dataset.campo, Number(campo.value || 0)]));
     }
 
+    function mostrarEdicaoEscalaAntiga(lancamentoSelecionado) {
+        const lista = document.getElementById('listaViagens');
+        const camposLegado = document.getElementById('camposLancamentoLegado');
+        const status = document.getElementById('statusViagens');
+        const registros = lancamentosCarregados
+            .filter(item => !item.horario_operacao_id && (item.escala_id || item.hora_inicio || item.hora_fim))
+            .reduce((itens, item) => {
+                if (!itens.some(atual => atual.id === item.id)) itens.push(item);
+                return itens;
+            }, []);
+        if (!registros.some(item => item.id === lancamentoSelecionado.id)) {
+            registros.push(lancamentoSelecionado);
+        }
+        registros.sort((a, b) => String(a.hora_inicio || '').localeCompare(String(b.hora_inicio || '')));
+
+        const entrada = (campo, valor, hora) => `<input class="form-control form-control-sm" type="number" step="0.01" data-campo="${campo}" value="${Number(valor || 0)}" aria-label="${campo} do horário ${escaparHtml(hora)}">`;
+        const quantidade = (campo, valor, hora) => `<input class="form-control form-control-sm" type="number" min="0" step="1" data-campo="${campo}" value="${Number(valor || 0)}" aria-label="${campo} do horário ${escaparHtml(hora)}">`;
+
+        modoEdicaoEscalaAntiga = true;
+        lista.innerHTML = `<div class="table-responsive"><table class="table table-sm table-bordered align-middle mb-0">
+            <thead class="table-light"><tr>
+                <th>Horário original da escala</th><th>Motorista (qtd.)</th><th>Excesso (R$)</th>
+                <th>Comum (R$)</th><th>Escolar (R$)</th><th>VT (R$)</th><th>KM</th>
+            </tr></thead><tbody>${registros.map(lancamento => {
+                const hora = `${formatarHoraLancamento(lancamento.hora_inicio)} - ${formatarHoraLancamento(lancamento.hora_fim)}`;
+                return `<tr data-lancamento-antigo-id="${escaparHtml(lancamento.id)}">
+                    <td class="text-nowrap">${escaparHtml(hora)}</td>
+                    <td>${quantidade('quantidade_motorista', lancamento.quantidade_motorista, hora)}</td>
+                    <td>${entrada('valor_excesso', lancamento.valor_excesso, hora)}</td>
+                    <td>${entrada('comum', lancamento.comum, hora)}</td>
+                    <td>${entrada('escolar', lancamento.escolar, hora)}</td>
+                    <td>${entrada('vt', lancamento.vt, hora)}</td>
+                    <td>${entrada('km_rodado', lancamento.km_rodado, hora)}</td>
+                </tr>`;
+            }).join('')}</tbody></table></div>`;
+        camposLegado.style.display = 'none';
+        document.getElementById('kmRodado').required = false;
+        document.getElementById('btnSalvarLancamento').textContent = 'Atualizar Lançamento';
+        status.textContent = `Editando ${registros.length} horário(s) já lançados na escala para esta data e linha. Os registros serão atualizados individualmente, sem redistribuição para os trechos novos.`;
+    }
+
     function atualizarResumoTrecho(linhaViagem) {
         const detalhe = document.querySelector(`#listaViagens tr[data-detalhe-de="${linhaViagem.dataset.horarioOperacaoId}"]`);
         if (!detalhe) return;
@@ -140,6 +183,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const sequencia = ++sequenciaCarregamentoViagens;
         const botaoSalvar = document.getElementById('btnSalvarLancamento');
         trechosLancamento = [];
+        lancamentosCarregados = [];
 
         if (!lista || !dataOp || !linhaId) {
             if (lista) lista.innerHTML = '';
@@ -179,7 +223,8 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const lancamentosPorTrecho = new Map((resultadoLancamentos.data || [])
+        lancamentosCarregados = resultadoLancamentos.data || [];
+        const lancamentosPorTrecho = new Map(lancamentosCarregados
             .filter(item => item.horario_operacao_id)
             .map(item => [String(item.horario_operacao_id), item]));
         trechosLancamento = resultadoHorarios.data || [];
@@ -387,7 +432,30 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             let error;
-            if (trechosLancamento.length) {
+            if (modoEdicaoEscalaAntiga) {
+                const linhasAntigas = [...document.querySelectorAll('#listaViagens tr[data-lancamento-antigo-id]')];
+                for (const linhaAntiga of linhasAntigas) {
+                    const valores = Object.fromEntries([...linhaAntiga.querySelectorAll('[data-campo]')]
+                        .map(campo => [campo.dataset.campo, Number(campo.value || 0)]));
+                    const resultado = await window.supabaseClient.rpc('salvar_lancamento', {
+                        p_lancamento_id: linhaAntiga.dataset.lancamentoAntigoId,
+                        p_dados: {
+                            data_op: document.getElementById('dataOp').value,
+                            linha_id: parseInt(linhaId, 10),
+                            quantidade_motorista: valores.quantidade_motorista,
+                            valor_excesso: valores.valor_excesso,
+                            comum: valores.comum,
+                            escolar: valores.escolar,
+                            vt: valores.vt,
+                            km_rodado: valores.km_rodado
+                        }
+                    });
+                    if (resultado.error) {
+                        error = resultado.error;
+                        break;
+                    }
+                }
+            } else if (trechosLancamento.length) {
                 const viagens = [...document.querySelectorAll('#listaViagens tbody tr[data-horario-operacao-id]')].map(linhaViagem => {
                     const valores = Object.fromEntries([...linhaViagem.querySelectorAll('[data-campo]')]
                         .map(campo => [campo.dataset.campo, Number(campo.value || 0)]));
@@ -417,6 +485,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 formLancamento.reset();
                 idLancamentoEdicao = null;
+                modoEdicaoEscalaAntiga = false;
+                document.getElementById('dataOp').readOnly = setorUsuario === 'Operacional';
+                document.getElementById('linha').disabled = false;
                 await carregarViagensLancamento();
                 document.getElementById('tituloPagina').textContent = 'Novo Lançamento';
                 btnSubmit.textContent = 'Salvar Lançamento';
@@ -551,6 +622,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        modoEdicaoEscalaAntiga = false;
         const { data, error } = await window.supabaseClient.rpc('obter_lancamento_edicao', {
             p_lancamento_id: id
         });
@@ -561,7 +633,12 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('dataOp').value = data.data_op;
             document.getElementById('linha').value = data.linha_id; // Seleciona o ID correto no select
             await carregarViagensLancamento();
-            if (!data.escala_id && !data.horario_operacao_id) {
+            if (!data.horario_operacao_id && (data.escala_id || data.hora_inicio || data.hora_fim)) {
+                trechosLancamento = [];
+                document.getElementById('dataOp').readOnly = true;
+                document.getElementById('linha').disabled = true;
+                mostrarEdicaoEscalaAntiga(data);
+            } else if (!data.horario_operacao_id) {
                 trechosLancamento = [];
                 document.getElementById('listaViagens').innerHTML = '';
                 document.getElementById('camposLancamentoLegado').style.display = 'block';
