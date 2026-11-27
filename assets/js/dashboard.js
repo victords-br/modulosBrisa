@@ -8,9 +8,17 @@ document.addEventListener('DOMContentLoaded', () => {
     let usuarioLogado = null;
     let setorUsuario = '';
     let idLancamentoEdicao = null;
-    let escalasLancamento = [];
+    let trechosLancamento = [];
     let sequenciaCarregamentoViagens = 0;
-    let tarifaLancamentoVt = null;
+    let tarifasLancamento = null;
+
+    const NOMES_TIPO_DIA = { 1: 'Úteis', 2: 'Sábado', 3: 'Domingo' };
+    const TIPOS_DIA_POR_DIA_SEMANA = { 0: 3, 6: 2 };
+
+    function tipoDiaPorData(dataIso) {
+        const diaSemana = new Date(`${dataIso}T00:00:00`).getDay();
+        return TIPOS_DIA_POR_DIA_SEMANA[diaSemana] || 1;
+    }
 
     // ==========================================
     // 1. INICIALIZAÇÃO E VERIFICAÇÃO DE PERFIL
@@ -27,25 +35,30 @@ document.addEventListener('DOMContentLoaded', () => {
         configurarTela(setorUsuario);
 
         await carregarLinhas();
-        await carregarTarifaVt();
+        await carregarTarifas();
         if (setorUsuario === 'Operacional') {
             window.mostrarAba('tabela');
         }
     }
 
     // ==========================================
-    // CARREGAR A TARIFA DE VT (PARA O INDICADOR R$ / KM)
+    // CARREGAR AS TARIFAS (PARA O INDICADOR R$ / KM)
     // ==========================================
-    async function carregarTarifaVt() {
+    async function carregarTarifas() {
         if (setorUsuario === 'Operacional') return;
 
-        const { data, error } = await window.supabaseClient.rpc('obter_tarifa_vt_lancamento');
+        const { data, error } = await window.supabaseClient.rpc('obter_tarifas_lancamento_publico');
         if (error) {
-            console.error('Não foi possível carregar a tarifa de VT. Execute a migração financeiro_km.sql no SQL Editor.', error);
+            console.error('Não foi possível carregar as tarifas. Execute a migração horarios_operacao.sql no SQL Editor.', error);
             return;
         }
-        if (data !== null && data !== undefined) {
-            tarifaLancamentoVt = Number(data);
+        if (data) {
+            tarifasLancamento = {
+                comum: Number(data.comum || 0),
+                escolar: Number(data.escolar || 0),
+                vt: Number(data.vt || 0),
+                pagantes: Number(data.pagantes || 0)
+            };
         }
     }
 
@@ -93,6 +106,32 @@ document.addEventListener('DOMContentLoaded', () => {
         return hora ? String(hora).slice(0, 5) : '--:--';
     }
 
+    function calcularValoresViagem(linhaViagem) {
+        return Object.fromEntries([...linhaViagem.querySelectorAll('[data-campo]')]
+            .map(campo => [campo.dataset.campo, Number(campo.value || 0)]));
+    }
+
+    function atualizarResumoTrecho(linhaViagem) {
+        const detalhe = document.querySelector(`#listaViagens tr[data-detalhe-de="${linhaViagem.dataset.horarioOperacaoId}"]`);
+        if (!detalhe) return;
+
+        const valores = calcularValoresViagem(linhaViagem);
+        const tarifas = tarifasLancamento || { comum: 0, escolar: 0, vt: 0, pagantes: 0 };
+        const total = valores.quantidade_comum * tarifas.comum
+            + valores.quantidade_escolar * tarifas.escolar
+            + valores.quantidade_vt * tarifas.vt
+            + valores.quantidade_motorista * tarifas.pagantes
+            + valores.valor_excesso;
+        const km = valores.km_rodado;
+        const rsPorKm = km > 0 ? total / km : 0;
+        const cor = (tarifas.vt || 0) > 0 ? (rsPorKm >= tarifas.vt ? 'text-success' : 'text-danger') : '';
+
+        const resumo = detalhe.querySelector('[data-resumo-trecho]');
+        resumo.innerHTML = `Total do trecho: <strong>R$ ${total.toFixed(2)}</strong>`
+            + ` &middot; KM: ${km.toFixed(2)}`
+            + ` &middot; <span class="${cor}">R$ / km: <strong>R$ ${rsPorKm.toFixed(2)}</strong></span>`;
+    }
+
     async function carregarViagensLancamento() {
         const lista = document.getElementById('listaViagens');
         const status = document.getElementById('statusViagens');
@@ -100,24 +139,25 @@ document.addEventListener('DOMContentLoaded', () => {
         const linhaId = document.getElementById('linha').value;
         const sequencia = ++sequenciaCarregamentoViagens;
         const botaoSalvar = document.getElementById('btnSalvarLancamento');
-        escalasLancamento = [];
+        trechosLancamento = [];
 
         if (!lista || !dataOp || !linhaId) {
             if (lista) lista.innerHTML = '';
             if (botaoSalvar) botaoSalvar.disabled = false;
-            if (status) status.textContent = 'Selecione a data e a linha para carregar as viagens da escala.';
+            if (status) status.textContent = 'Selecione a data e a linha para carregar os trechos da grade operacional.';
             return;
         }
 
+        const tipoDiaId = tipoDiaPorData(dataOp);
         lista.innerHTML = '';
         if (botaoSalvar) botaoSalvar.disabled = true;
-        if (status) status.textContent = 'Carregando viagens da escala...';
-        const [resultadoEscalas, resultadoLancamentos] = await Promise.all([
-            window.supabaseClient.from('escalas_trabalho')
-                .select('id, hora_inicio, hora_fim')
-                .eq('data_escala', dataOp)
+        if (status) status.textContent = 'Carregando trechos da grade...';
+        const [resultadoHorarios, resultadoLancamentos] = await Promise.all([
+            window.supabaseClient.from('horarios_operacao')
+                .select('id, tabela, ida_volta, horario_saida, horario_chegada, local_saida, local_chegada, distancia_km')
                 .eq('linha_id', Number(linhaId))
-                .order('hora_inicio'),
+                .eq('tipo_dia_id', tipoDiaId)
+                .order('horario_saida'),
             window.supabaseClient.rpc('listar_lancamentos_dashboard', {
                 p_linha_id: Number(linhaId),
                 p_data_inicio: dataOp,
@@ -126,10 +166,10 @@ document.addEventListener('DOMContentLoaded', () => {
         ]);
 
         if (sequencia !== sequenciaCarregamentoViagens) return;
-        if (resultadoEscalas.error) {
-            console.error('Erro ao carregar viagens da escala:', resultadoEscalas.error);
+        if (resultadoHorarios.error) {
+            console.error('Erro ao carregar a grade operacional:', resultadoHorarios.error);
             document.getElementById('camposLancamentoLegado').style.display = 'none';
-            if (status) status.textContent = 'Não foi possível carregar as viagens da escala.';
+            if (status) status.textContent = 'Não foi possível carregar os trechos da grade. Execute a migração horarios_operacao.sql no SQL Editor.';
             return;
         }
         if (resultadoLancamentos.error) {
@@ -139,28 +179,30 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const lancamentosPorEscala = new Map((resultadoLancamentos.data || [])
-            .filter(item => item.escala_id)
-            .map(item => [String(item.escala_id), item]));
-        escalasLancamento = resultadoEscalas.data || [];
+        const lancamentosPorTrecho = new Map((resultadoLancamentos.data || [])
+            .filter(item => item.horario_operacao_id)
+            .map(item => [String(item.horario_operacao_id), item]));
+        trechosLancamento = resultadoHorarios.data || [];
 
         if (setorUsuario === 'Operacional') {
-            escalasLancamento = [];
+            trechosLancamento = [];
             lista.innerHTML = '';
             document.getElementById('camposLancamentoLegado').style.display = 'block';
             document.getElementById('kmRodado').required = true;
             if (botaoSalvar) botaoSalvar.disabled = false;
-            if (status) status.textContent = 'A escala possui viagens neste dia. Use os campos operacionais para complementar o lançamento.';
+            if (status) status.textContent = 'Use os campos operacionais para complementar o lançamento.';
             return;
         }
 
-        if (escalasLancamento.length === 0) {
+        const nomeTipoDia = NOMES_TIPO_DIA[tipoDiaId] || 'Úteis';
+
+        if (trechosLancamento.length === 0) {
             lista.innerHTML = '';
             document.getElementById('camposLancamentoLegado').style.display = 'block';
             document.getElementById('kmRodado').required = true;
             document.getElementById('btnSalvarLancamento').textContent = 'Salvar Lançamento';
             if (botaoSalvar) botaoSalvar.disabled = false;
-            if (status) status.textContent = 'Não há viagens cadastradas na escala para esta linha e data.';
+            if (status) status.textContent = `Não há trechos cadastrados na grade para esta linha no dia ${nomeTipoDia}. Use os campos abaixo.`;
             return;
         }
 
@@ -168,26 +210,51 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('kmRodado').required = false;
         document.getElementById('btnSalvarLancamento').textContent = 'Salvar Lançamentos por Viagem';
         if (botaoSalvar) botaoSalvar.disabled = false;
-        if (status) status.textContent = `${escalasLancamento.length} ${escalasLancamento.length === 1 ? 'viagem carregada' : 'viagens carregadas'} da escala.`;
+        if (status) status.textContent = `${trechosLancamento.length} ${trechosLancamento.length === 1 ? 'trecho carregado' : 'trechos carregados'} da grade (${nomeTipoDia}). Clique no trecho para ver o R$ / km.`;
         lista.innerHTML = `<div class="table-responsive"><table class="table table-sm table-bordered align-middle mb-0">
             <thead class="table-light"><tr>
-                <th>Horário da escala</th><th>Motorista (qtd.)</th><th>Excesso (R$)</th>
+                <th>Bloco</th><th>Sentido</th><th>Saída - Chegada</th><th>Rota</th>
+                <th>Motorista (qtd.)</th><th>Excesso (R$)</th>
                 <th>Comum (qtd.)</th><th>Escolar (qtd.)</th><th>VT (qtd.)</th><th>KM</th>
-            </tr></thead><tbody>${escalasLancamento.map(escala => {
-                const id = String(escala.id);
-                const lancamento = lancamentosPorEscala.get(id) || {};
-                const entrada = (campo, valor) => `<input class="form-control form-control-sm" type="number" min="0" step="0.01" data-campo="${campo}" value="${Number(valor || 0)}" aria-label="${campo} da viagem ${formatarHoraLancamento(escala.hora_inicio)}">`;
-                const quantidade = (campo, valor) => `<input class="form-control form-control-sm" type="number" min="0" step="1" data-campo="${campo}" value="${Number(valor || 0)}" aria-label="${campo} da viagem ${formatarHoraLancamento(escala.hora_inicio)}">`;
-                return `<tr data-escala-id="${escaparHtml(id)}" data-lancamento-id="${escaparHtml(lancamento.id || '')}">
-                    <th class="text-nowrap">${escaparHtml(formatarHoraLancamento(escala.hora_inicio))} - ${escaparHtml(formatarHoraLancamento(escala.hora_fim))}</th>
+            </tr></thead><tbody>${trechosLancamento.map(trecho => {
+                const id = String(trecho.id);
+                const lancamento = lancamentosPorTrecho.get(id) || {};
+                const kmValor = lancamento.km_rodado != null ? lancamento.km_rodado : trecho.distancia_km;
+                const entrada = (campo, valor) => `<input class="form-control form-control-sm" type="number" min="0" step="0.01" data-campo="${campo}" value="${Number(valor || 0)}" aria-label="${campo} do trecho ${formatarHoraLancamento(trecho.horario_saida)}">`;
+                const quantidade = (campo, valor) => `<input class="form-control form-control-sm" type="number" min="0" step="1" data-campo="${campo}" value="${Number(valor || 0)}" aria-label="${campo} do trecho ${formatarHoraLancamento(trecho.horario_saida)}">`;
+                const sentido = trecho.ida_volta === 'IDA' ? 'primary' : 'secondary';
+                return `<tr class="trecho-linha" role="button" style="cursor:pointer" title="Clique para ver o R$ / km" data-horario-operacao-id="${escaparHtml(id)}" data-lancamento-id="${escaparHtml(lancamento.id || '')}">
+                    <th class="text-nowrap">Bloco ${escaparHtml(trecho.tabela)}</th>
+                    <td><span class="badge text-bg-${sentido}">${escaparHtml(trecho.ida_volta)}</span></td>
+                    <td class="text-nowrap">${escaparHtml(formatarHoraLancamento(trecho.horario_saida))} - ${escaparHtml(formatarHoraLancamento(trecho.horario_chegada))}</td>
+                    <td class="small">${escaparHtml(trecho.local_saida || '')} &rarr; ${escaparHtml(trecho.local_chegada || '')}</td>
                     <td>${quantidade('quantidade_motorista', lancamento.quantidade_motorista)}</td>
                     <td>${entrada('valor_excesso', lancamento.valor_excesso)}</td>
                     <td>${quantidade('quantidade_comum', lancamento.quantidade_comum)}</td>
                     <td>${quantidade('quantidade_escolar', lancamento.quantidade_escolar)}</td>
                     <td>${quantidade('quantidade_vt', lancamento.quantidade_vt)}</td>
-                    <td>${entrada('km_rodado', lancamento.km_rodado)}</td>
-                </tr>`;
+                    <td>${entrada('km_rodado', kmValor)}</td>
+                </tr>
+                <tr data-detalhe-de="${escaparHtml(id)}" class="table-light" style="display:none"><td colspan="10"><div class="small text-muted" data-resumo-trecho></div></td></tr>`;
             }).join('')}</tbody></table></div>`;
+
+        [...lista.querySelectorAll('tr[data-horario-operacao-id]')].forEach(atualizarResumoTrecho);
+
+        if (!lista.dataset.trechoAcoes) {
+            lista.addEventListener('click', event => {
+                if (event.target.closest('input, select, button, a, label')) return;
+                const linhaViagem = event.target.closest('tr[data-horario-operacao-id]');
+                if (!linhaViagem) return;
+                const detalhe = document.querySelector(`#listaViagens tr[data-detalhe-de="${linhaViagem.dataset.horarioOperacaoId}"]`);
+                if (!detalhe) return;
+                detalhe.style.display = detalhe.style.display === 'none' ? '' : 'none';
+            });
+            lista.addEventListener('input', event => {
+                const linhaViagem = event.target.closest('tr[data-horario-operacao-id]');
+                if (linhaViagem) atualizarResumoTrecho(linhaViagem);
+            });
+            lista.dataset.trechoAcoes = 'true';
+        }
     }
 
     // ==========================================
@@ -320,11 +387,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             let error;
-            if (escalasLancamento.length) {
-                const viagens = [...document.querySelectorAll('#listaViagens tbody tr[data-escala-id]')].map(linhaViagem => {
+            if (trechosLancamento.length) {
+                const viagens = [...document.querySelectorAll('#listaViagens tbody tr[data-horario-operacao-id]')].map(linhaViagem => {
                     const valores = Object.fromEntries([...linhaViagem.querySelectorAll('[data-campo]')]
                         .map(campo => [campo.dataset.campo, Number(campo.value || 0)]));
-                    return { escala_id: linhaViagem.dataset.escalaId, ...valores };
+                    return { horario_operacao_id: Number(linhaViagem.dataset.horarioOperacaoId), ...valores };
                 });
                 ({ error } = await window.supabaseClient.rpc('salvar_lancamentos_por_viagem', {
                     p_data_op: dadosLancamento.data_op,
@@ -404,8 +471,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 const totalGrupo = numero(itens, 'valor_total');
                 const kmGrupo = numero(itens, 'km_rodado');
                 const rsPorKm = kmGrupo > 0 ? totalGrupo / kmGrupo : 0;
-                const corRsPorKm = tarifaLancamentoVt !== null
-                    ? (rsPorKm >= tarifaLancamentoVt ? 'fw-bold text-success' : 'fw-bold text-danger')
+                const tarifaVtReferencia = tarifasLancamento ? tarifasLancamento.vt : null;
+                const corRsPorKm = tarifaVtReferencia !== null
+                    ? (rsPorKm >= tarifaVtReferencia ? 'fw-bold text-success' : 'fw-bold text-danger')
                     : '';
 
                 if (operacional) {
@@ -429,23 +497,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const detalhes = itens.map(item => {
                     const horario = `${formatarHoraLancamento(item.hora_inicio)} - ${formatarHoraLancamento(item.hora_fim)}`;
+                    const bloco = escaparHtml(item.tabela ?? '—');
+                    const sentido = escaparHtml(item.ida_volta ?? '—');
+                    const kmItem = Number(item.km_rodado || 0);
+                    const rsPorKmItem = kmItem > 0 ? Number(item.valor_total || 0) / kmItem : 0;
+                    const corItem = tarifaVtReferencia !== null
+                        ? (rsPorKmItem >= tarifaVtReferencia ? 'text-success' : 'text-danger')
+                        : '';
                     const botaoEditar = (operacional || ['Administração', 'Financeiro', 'TI'].includes(setorUsuario))
                         ? `<button class="btn btn-sm btn-outline-primary" type="button" data-editar-lancamento="${escaparHtml(item.id)}">Editar</button>`
                         : '';
                     if (operacional) {
-                        return `<tr><td>${escaparHtml(horario)}</td><td>${moeda(item.valor_excesso)}</td><td>${Number(item.km_rodado || 0).toFixed(2)} km</td><td>${botaoEditar}</td></tr>`;
+                        return `<tr><td>${escaparHtml(horario)}</td><td>${bloco}</td><td>${sentido}</td><td>${moeda(item.valor_excesso)}</td><td>${kmItem.toFixed(2)} km</td><td>${botaoEditar}</td></tr>`;
                     }
                     return `<tr>
-                        <td>${escaparHtml(horario)}</td><td>${Number(item.quantidade_motorista || 0)}</td><td>${moeda(item.valor_garagem)}</td>
+                        <td>${escaparHtml(horario)}</td><td>${bloco}</td><td>${sentido}</td>
+                        <td>${Number(item.quantidade_motorista || 0)}</td><td>${moeda(item.valor_garagem)}</td>
                         <td>${moeda(item.valor_excesso)}</td><td>${Number(item.quantidade_comum || 0)}</td><td>${moeda(item.comum)}</td>
                         <td>${Number(item.quantidade_escolar || 0)}</td><td>${moeda(item.escolar)}</td>
                         <td>${Number(item.quantidade_vt || 0)}</td><td>${moeda(item.vt)}</td>
-                        <td>${Number(item.km_rodado || 0).toFixed(2)} km</td><td>${botaoEditar}</td>
+                        <td>${kmItem.toFixed(2)} km</td><td class="${corItem}">${moeda(rsPorKmItem)}</td><td>${botaoEditar}</td>
                     </tr>`;
                 }).join('');
                 const cabecalhoDetalhes = operacional
-                    ? '<tr><th>Horário</th><th>Excesso</th><th>KM</th><th>Ações</th></tr>'
-                    : '<tr><th>Horário</th><th>Motorista (qtd.)</th><th>Pagantes (R$)</th><th>Excesso</th><th>Comum qtd.</th><th>Comum R$</th><th>Escolar qtd.</th><th>Escolar R$</th><th>VT qtd.</th><th>VT R$</th><th>KM</th><th>Ações</th></tr>';
+                    ? '<tr><th>Horário</th><th>Bloco</th><th>Sentido</th><th>Excesso</th><th>KM</th><th>Ações</th></tr>'
+                    : '<tr><th>Horário</th><th>Bloco</th><th>Sentido</th><th>Motorista (qtd.)</th><th>Pagantes (R$)</th><th>Excesso</th><th>Comum qtd.</th><th>Comum R$</th><th>Escolar qtd.</th><th>Escolar R$</th><th>VT qtd.</th><th>VT R$</th><th>KM</th><th>R$ / km</th><th>Ações</th></tr>';
                 tbody.insertAdjacentHTML('beforeend', `${linhaResumo}<tr id="detalhes-${indice}" class="table-light" style="display:none"><td colspan="${colspan}"><div class="table-responsive"><table class="table table-sm table-bordered align-middle mb-0"><thead>${cabecalhoDetalhes}</thead><tbody>${detalhes}</tbody></table></div></td></tr>`);
             });
 
@@ -485,8 +561,8 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('dataOp').value = data.data_op;
             document.getElementById('linha').value = data.linha_id; // Seleciona o ID correto no select
             await carregarViagensLancamento();
-            if (!data.escala_id) {
-                escalasLancamento = [];
+            if (!data.escala_id && !data.horario_operacao_id) {
+                trechosLancamento = [];
                 document.getElementById('listaViagens').innerHTML = '';
                 document.getElementById('camposLancamentoLegado').style.display = 'block';
                 document.getElementById('kmRodado').required = true;
